@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Archive · TDL</title>
+  <meta name="description" content="A past league or tournament — results, final table and photos." />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+
+<!--
+  This one page is reused for EVERY past league and tournament.
+  It works out which one to show from the web address, e.g.
+      season.html?s=2024-autumn
+  To add a new one you only edit data/archive.js — never this file.
+-->
+
+<body data-page="season" data-title="Archive">
+  <header class="site-header" id="site-header"></header>
+
+  <section class="section">
+    <div class="wrap" id="season-body"></div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="data/config.js"></script>
+  <script src="data/players.js"></script>
+  <script src="data/matches.js"></script>
+  <script src="data/archive.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/pages.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

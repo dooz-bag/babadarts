@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stats &amp; Records · TDL</title>
+  <meta name="description" content="Every player's 01 PPD and cricket MPR averages, win records, single-game highs and past champions." />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+
+<body data-page="stats" data-title="Stats &amp; Records">
+  <header class="site-header" id="site-header"></header>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Straight off the DARTSLIVE screen</p>
+      <h1>Stats &amp; Records</h1>
+      <p class="hero-sub">Everyone's averages in one big sortable table, then the season's
+        leaders, the single-game highs and every champion we've ever had.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div id="stats-table"></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div id="stats-help"></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------ RECORDS / HONOURS -->
+  <section class="section" id="records" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Best of the league</p>
+          <h2>This season's leaders</h2>
+        </div>
+      </div>
+      <div class="grid grid-3" id="records-season"></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <h2>Individual game highs</h2>
+      <p class="muted">The single best game anyone has produced this season.</p>
+      <div class="grid grid-2" id="records-games"></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <h2>The prestigious awards</h2>
+      <p class="muted">Nobody has ever asked to win one of these.</p>
+      <div class="grid grid-2" id="records-fun"></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <h2>Roll of honour</h2>
+      <p class="muted">Every league and tournament we've finished.</p>
+      <div id="roll-of-honour"></div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="data/config.js"></script>
+  <script src="data/players.js"></script>
+  <script src="data/matches.js"></script>
+  <script src="data/archive.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/pages.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>League Table · TDL</title>
+  <meta name="description" content="Current league tables for Group A and Group B, with playoff and bye cut-lines." />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+
+<body data-page="league" data-title="League Table">
+  <header class="site-header" id="site-header"></header>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Current season</p>
+      <h1>The League Table</h1>
+      <p class="hero-sub" id="league-intro"></p>
+    </div>
+  </section>
+
+  <!-- One table per group, built by pages.js from whatever is in players.js -->
+  <div class="wrap" id="group-tables"></div>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="data/config.js"></script>
+  <script src="data/players.js"></script>
+  <script src="data/matches.js"></script>
+  <script src="data/archive.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/pages.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home · TDL</title>
+  <meta name="description" content="The Takadanobaba Darts League — soft tip darts league often happening at HUB Takadanobaba, Tokyo. Tables, stats, results and photos." />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+
+<body data-page="home" data-title="Home">
+  <header class="site-header" id="site-header"></header>
+
+  <!-- ------------------------------------------------------------- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">Tokyo · 高田馬場 · Soft tip</p>
+        <h1 id="hero-title"></h1>
+        <p class="hero-sub" id="hero-sub"></p>
+        <div class="chips" id="hero-chips"></div>
+        <div class="btn-row">
+          <a class="btn" href="league.html">See the table</a>
+                    <a class="btn btn-quiet" href="join.html">How to join</a>
+        </div>
+      </div>
+      <div class="hero-art" id="hero-art"></div>
+    </div>
+  </section>
+
+  <div class="quip-line" id="quip-line"></div>
+
+  <!-- ---------------------------------------------------- LEAGUE STATUS -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Current league status</p>
+          <h2>Where things stand right now</h2>
+        </div>
+        <a href="playoffs.html">Playoff picture →</a>
+      </div>
+      <div id="status-board"></div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------- LATEST RESULTS -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Last time out</p>
+          <h2>Latest results</h2>
+        </div>
+        <a href="stats.html">All the numbers →</a>
+      </div>
+      <div id="latest-results"></div>
+    </div>
+  </section>
+
+    <!-- ----------------------------------------------------- MINI TABLES -->
+  <!-- One table per group is built by pages.js, however many groups there are -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" id="race-intro"></p>
+          <h2>The race</h2>
+        </div>
+        <a href="league.html">Full tables →</a>
+      </div>
+      <div class="grid grid-2" id="mini-tables"></div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------- LEADERS -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+                    <p class="eyebrow">Currently top of the pile</p>
+          <h2>Who's flying</h2>
+        </div>
+        <a href="stats.html#records">Records &amp; honours →</a>
+      </div>
+      <div class="grid grid-3" id="home-leaders"></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- HUB -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Our home board</p>
+          <h2>The HUB, Takadanobaba</h2>
+        </div>
+        <a href="join.html">Find us →</a>
+      </div>
+      <div class="gallery" id="hub-photos"></div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <!-- Data first, then the engine, then the page builders -->
+  <script src="data/config.js"></script>
+  <script src="data/players.js"></script>
+  <script src="data/matches.js"></script>
+  <script src="data/archive.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/pages.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
