@@ -73,13 +73,21 @@
 
   D.playerName = function (id) { return D.player(id).name; };
 
+  // Everyone currently part of the league — i.e. not marked `active: false`.
+  // A departed player still keeps their row in data/players.js (so career
+  // stats keep their name, flag and avatar forever) but drops out of the
+  // groups, standings, playoff bracket and this season's leaderboard.
+  D.activePlayers = function () {
+    return D.players.filter(function (p) { return p.active !== false; });
+  };
+
   /* ------------------------------------------------------------- groups --- */
 
-  // Whatever groups the players are actually in, in alphabetical order.
+  // Whatever groups the ACTIVE players are actually in, in alphabetical order.
   // Nothing in the site assumes there are two of them, or how big they are.
   D.groups = function () {
     var seen = {}, out = [];
-    D.players.forEach(function (p) {
+    D.activePlayers().forEach(function (p) {
       var g = p.group || "A";
       if (!seen[g]) { seen[g] = true; out.push(g); }
     });
@@ -87,7 +95,7 @@
   };
 
   D.groupSize = function (group) {
-    return D.players.filter(function (p) { return p.group === group; }).length;
+    return D.activePlayers().filter(function (p) { return p.group === group; }).length;
   };
 
   // Everyone plays everyone else in their group once.
@@ -149,6 +157,16 @@
     });
   };
 
+  /* Every match ever played: this season's results plus everything logged
+     in data/history.js (or a History sheet). Used only for career totals —
+     the current league table, playoffs etc. all stay scoped to D.matches so
+     an old season never bleeds into this season's standings. */
+  D.allMatchesEver = function () {
+    return (D.matches || []).concat(D.history || []).sort(function (x, y) {
+      return x.date < y.date ? 1 : x.date > y.date ? -1 : 0;
+    });
+  };
+
   // Groups matches into play nights: [{ date, matches:[...] }, ...] newest first
   D.matchNights = function () {
     var map = {}, order = [];
@@ -161,7 +179,9 @@
 
   /* ------------------------------------------------- per-player numbers --- */
 
-  D.statsFor = function (pid) {
+  // Shared by D.statsFor (this season only) and D.careerStatsFor (everything
+  // ever played) — same maths, just a different list of matches fed in.
+  function computeStats(pid, matches) {
     var out = {
       id: pid, played: 0, won: 0, lost: 0,
       legsFor: 0, legsAgainst: 0,
@@ -172,7 +192,7 @@
       form: [] // newest first, "W" / "L"
     };
 
-    D.sortedMatches().forEach(function (m) {
+    matches.forEach(function (m) {
       if (m.a !== pid && m.b !== pid) return;
       var isA = m.a === pid;
       var s = D.legScore(m);
@@ -220,12 +240,37 @@
       else out.index = (p !== null ? p : c) * 100;
     }
     return out;
+  }
+
+  D.statsFor = function (pid) {
+    return computeStats(pid, D.sortedMatches());
   };
 
+  // Same numbers, but across every match this player has ever played —
+  // this season plus whatever's in data/history.js (or a History sheet).
+  D.careerStatsFor = function (pid) {
+    return computeStats(pid, D.allMatchesEver());
+  };
+
+  // This season's leaderboard — active players only. A player who leaves
+  // mid-season keeps everything they've already played in Career averages
+  // (below), they just drop off this list and the current league table.
   D.allStats = function () {
-    return D.players.map(function (p) {
+    return D.activePlayers().map(function (p) {
       var s = D.statsFor(p.id);
       s.player = p;
+      return s;
+    });
+  };
+
+  // Everyone who has EVER played a match, current roster or not — a past
+  // player who dropped out of players.js still keeps their career line.
+  D.allCareerStats = function () {
+    var ids = {};
+    D.allMatchesEver().forEach(function (m) { ids[m.a] = true; ids[m.b] = true; });
+    return Object.keys(ids).map(function (id) {
+      var s = D.careerStatsFor(id);
+      s.player = D.player(id);
       return s;
     });
   };
@@ -237,7 +282,7 @@
     var shape = D.playoffShape();
     var byeSpots = shape.byesPerGroup;
     var playoffSpots = shape.perGroup;
-    var rows = D.players
+    var rows = D.activePlayers()
       .filter(function (p) { return p.group === group; })
       .map(function (p) {
         var s = D.statsFor(p.id);
@@ -300,8 +345,10 @@
 
   /* ------------------------------------------------------ league bests --- */
 
-  D.leaders = function () {
-    var all = D.allStats().filter(function (s) { return s.played > 0; });
+  // Works out the various "best of" leaders from any list of stats objects
+  // (D.allStats() for this season, D.allCareerStats() for all-time).
+  D.leadersFrom = function (statsList) {
+    var all = statsList.filter(function (s) { return s.played > 0; });
 
     function top(key, getter) {
       var best = null;
@@ -342,6 +389,11 @@
       })()
     };
   };
+
+  D.leaders = function () { return D.leadersFrom(D.allStats()); };
+
+  // Best-of leaders across every match ever logged, not just this season.
+  D.careerLeaders = function () { return D.leadersFrom(D.allCareerStats()); };
 
   /* --------------------------------------------------- playoff bracket --- */
 
@@ -522,17 +574,47 @@
     return isNaN(n) ? null : n;
   }
 
-  D.loadFromSheet = function () {
-    var s = D.config.sheet;
-    if (!s || !s.enabled || !s.playersCsvUrl || !s.matchesCsvUrl || typeof fetch !== "function") {
-      return Promise.resolve(false);
-    }
-    var get = function (url) {
-      return fetch(url, { cache: "no-store" }).then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.text();
+  // Reads a loose true/false-ish CSV cell. Blank means "not set", so it
+  // falls back to `def` — used to make the Players tab's `active` column
+  // optional (blank = active) rather than forcing everyone to fill it in.
+  function parseBool(v, def) {
+    if (v === undefined || v === null || String(v).trim() === "") return def;
+    var s = String(v).trim().toLowerCase();
+    if (s === "false" || s === "no" || s === "n" || s === "0") return false;
+    if (s === "true" || s === "yes" || s === "y" || s === "1") return true;
+    return def;
+  }
+
+  // Shared by the Matches tab and the History tab — same sixteen columns
+  // (date, group, playerA, playerB, then three legs of game/winner/a/b).
+  function rowsToMatches(objs) {
+    return objs.map(function (r) {
+      var legs = [];
+      [1, 2, 3].forEach(function (n) {
+        var g = r["g" + n + "game"], w = r["g" + n + "winner"];
+        if (!g || !w) return;
+        legs.push({
+          game: g.toLowerCase(), winner: w,
+          aStat: numOrNull(r["g" + n + "a"]), bStat: numOrNull(r["g" + n + "b"])
+        });
       });
-    };
+      return {
+        date: r.date, group: (r.group || "").toUpperCase(),
+        a: r.playera || r.a, b: r.playerb || r.b, legs: legs
+      };
+    }).filter(function (m) { return m.a && m.b && m.legs.length; });
+  }
+
+  function get(url) {
+    return fetch(url, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
+    });
+  }
+
+  // Players + this season's matches. Controlled by sheet.enabled.
+  function loadPlayersAndMatches(s) {
+    if (!s.playersCsvUrl || !s.matchesCsvUrl) return Promise.resolve(false);
     return Promise.all([get(s.playersCsvUrl), get(s.matchesCsvUrl)])
       .then(function (res) {
         var pl = toObjects(parseCsv(res[0]));
@@ -543,27 +625,12 @@
           return {
             id: r.id, name: r.name || r.id, dartslive: r.dartslive || "",
             country: r.country || "", flag: r.flag || "", group: (r.group || "A").toUpperCase(),
-            avatar: r.avatar || "",
+            avatar: r.avatar || "", active: parseBool(r.active, true),
             notes: (r.notes || "").split("|").map(function (x) { return x.trim(); }).filter(Boolean)
           };
         }).filter(function (p) { return p.id; });
 
-        D.matches = mt.map(function (r) {
-          var legs = [];
-          [1, 2, 3].forEach(function (n) {
-            var g = r["g" + n + "game"], w = r["g" + n + "winner"];
-            if (!g || !w) return;
-            legs.push({
-              game: g.toLowerCase(), winner: w,
-              aStat: numOrNull(r["g" + n + "a"]), bStat: numOrNull(r["g" + n + "b"])
-            });
-          });
-          return {
-            date: r.date, group: (r.group || "").toUpperCase(),
-            a: r.playera || r.a, b: r.playerb || r.b, legs: legs
-          };
-        }).filter(function (m) { return m.a && m.b && m.legs.length; });
-
+        D.matches = rowsToMatches(mt);
         D.dataSource = "sheet";
         return true;
       })
@@ -573,7 +640,42 @@
         D.dataSource = "local-fallback";
         return false;
       });
+  }
+
+  // Career history is independent of the toggle above — you can keep this
+  // season's results local and still pull old seasons from a sheet, or the
+  // other way round. Same shape as the Matches tab, so the CSV is reusable.
+  function loadHistory(url) {
+    return get(url)
+      .then(function (text) {
+        var rows = toObjects(parseCsv(text));
+        if (!rows.length) throw new Error("History sheet looks empty");
+        D.history = rowsToMatches(rows);
+        D.historySource = "sheet";
+        return true;
+      })
+      .catch(function (err) {
+        console.warn("[DATSU] History sheet load failed, using data/history.js instead.", err);
+        D.historySource = "local-fallback";
+        return false;
+      });
+  }
+
+  D.loadFromSheet = function () {
+    var s = D.config.sheet || {};
+    var canFetch = typeof fetch === "function";
+
+    var mainTask = (canFetch && s.enabled)
+      ? loadPlayersAndMatches(s)
+      : Promise.resolve(false);
+
+    var historyTask = (canFetch && s.historyCsvUrl)
+      ? loadHistory(s.historyCsvUrl)
+      : Promise.resolve(false);
+
+    return Promise.all([mainTask, historyTask]).then(function (res) { return res[0]; });
   };
 
   D.dataSource = "local";
+  D.historySource = "local";
 })();

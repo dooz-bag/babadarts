@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Players · TDL</title>
-  <meta name="description" content="The full roster — names, DARTSLIVE cards, nationalities, records and accomplishments." />
+  <title>Submit a Result · TDL</title>
+  <meta name="description" content="Log a match result from your phone at the bar." />
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,19 +12,23 @@
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 
-<body data-page="players" data-title="Players">
+<body data-page="submit" data-title="Submit a Result">
   <header class="site-header" id="site-header"></header>
 
   <section class="section">
     <div class="wrap">
-      <p class="eyebrow">The roster</p>
-      <h1>The Players</h1>
-      <p class="hero-sub" id="players-intro"></p>
+      <p class="eyebrow">Straight off the DARTSLIVE screen</p>
+      <h1>Log a <span class="accent">result</span></h1>
+      <p class="hero-sub">Played a match tonight? Put it in here before you forget the numbers.
+        You'll need the league passcode — ask whoever runs the sheet if you don't have it.</p>
     </div>
   </section>
 
-  <!-- One block per group, built by pages.js -->
-  <div class="wrap" id="player-groups"></div>
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div id="submit-body"></div>
+    </div>
+  </section>
 
   <footer class="site-footer" id="site-footer"></footer>
 

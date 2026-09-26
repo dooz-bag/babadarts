@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stats &amp; Records · TDL</title>
-  <meta name="description" content="Every player's 01 PPD and cricket MPR averages, win records, single-game highs and past champions." />
+  <meta name="description" content="Every player's 01 PPD and cricket MPR averages, win records, single-game highs, career averages and past champions." />
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,8 +19,9 @@
     <div class="wrap">
       <p class="eyebrow">Straight off the DARTSLIVE screen</p>
       <h1>Stats &amp; Records</h1>
-      <p class="hero-sub">Everyone's averages in one big sortable table, then the season's
-        leaders, the single-game highs and every champion we've ever had.</p>
+      <p class="hero-sub">Everyone's averages in one sortable table, then the season's
+        leaders, the single-game highs, career averages across every league and tournament,
+        and every champion.</p>
     </div>
   </section>
 
@@ -52,7 +53,7 @@
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <h2>Individual game highs</h2>
-      <p class="muted">The single best game anyone has produced this season.</p>
+      <p class="muted">The best game anyone has produced this season.</p>
       <div class="grid grid-2" id="records-games"></div>
     </div>
   </section>
@@ -65,10 +66,25 @@
     </div>
   </section>
 
+  <!-- --------------------------------------------------- CAREER AVERAGES -->
+  <section class="section" id="career" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Every league and tournament combined</p>
+          <h2>Career averages</h2>
+        </div>
+      </div>
+      <p class="muted" id="career-intro"></p>
+      <div class="grid grid-3" id="records-alltime" style="margin-bottom:20px"></div>
+      <div id="career-table"></div>
+    </div>
+  </section>
+
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <h2>Roll of honour</h2>
-      <p class="muted">Every league and tournament we've finished.</p>
+      <p class="muted">Every league and tournament we've documented.</p>
       <div id="roll-of-honour"></div>
     </div>
   </section>
@@ -78,6 +94,7 @@
   <script src="data/config.js"></script>
   <script src="data/players.js"></script>
   <script src="data/matches.js"></script>
+  <script src="data/history.js"></script>
   <script src="data/archive.js"></script>
   <script src="assets/js/core.js"></script>
   <script src="assets/js/pages.js"></script>

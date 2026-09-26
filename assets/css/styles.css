@@ -606,6 +606,56 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
 }
 .quip-line em { color: var(--accent-warm); font-style: normal; }
 
+/* ---------------------------------------------------------------- FORM --- */
+.field-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
+.field { flex: 1 1 160px; min-width: 0; }
+.field label {
+  display: block;
+  font-family: var(--font-head);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 5px;
+}
+.field input, .field select {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 9px 10px;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent-cool); }
+.field.checkbox-field { display: flex; align-items: center; flex: 1 1 220px; }
+.field.checkbox-field label {
+  display: flex; align-items: center; gap: 8px;
+  text-transform: none; letter-spacing: 0; font-family: var(--font-body);
+  font-size: 0.9rem; color: var(--muted); margin: 0;
+}
+.field.checkbox-field input { width: auto; }
+.leg-fields {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 2px;
+  margin: 0 0 16px;
+}
+.leg-fields legend {
+  padding: 0 6px;
+  font-family: var(--font-head);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-cool);
+}
+.leg-fields legend .muted { font-family: var(--font-body); font-weight: 400; font-size: 0.78rem; }
+.form-msg { min-height: 1.3em; margin: 6px 0 0; font-size: 0.9rem; }
+.form-msg.is-err  { color: var(--accent); }
+.form-msg.is-ok   { color: var(--accent-good); }
+.form-msg.is-pending { color: var(--muted); }
+#resultForm .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
 /* -------------------------------------------------------------- FOOTER --- */
 .site-footer { border-top: 1px solid var(--line); background: var(--ink-2); padding: 36px 0 24px; margin-top: 36px; }
 .footer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }
@@ -657,6 +707,8 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
   .footer-grid { grid-template-columns: 1fr; }
   .section { padding: 34px 0; }
   .bracket { min-width: 720px; --conn: 16px; }
+  .field-row { flex-direction: column; }
+  .field { flex-basis: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

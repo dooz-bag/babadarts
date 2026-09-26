@@ -12,7 +12,7 @@ DATSU.config = {
   /* ---- Branding ------------------------------------------------------- */
   leagueName: "Takadanobaba Darts League",
   leagueShortName: "TDL",
-  tagline: "Two groups. One very loud bar.",
+  tagline: "A bunch of bullseyes and a very loud bar.",
 
   /* ---- Who to contact ------------------------------------------------
      TODO: put the real LINE details in here. Either is enough:
@@ -30,8 +30,7 @@ DATSU.config = {
     name: "HUB Takadanobaba",
     nameJa: "HUB 高田馬場店",
     address: "Takadanobaba, Shinjuku-ku, Tokyo",
-    mapsUrl: "https://maps.google.com/?q=HUB+Takadanobaba",
-    note: "Downstairs, past the ¥290 pints. Listen for the swearing."
+    mapsUrl: "https://maps.google.com/?q=HUB+Takadanobaba+East"
   },
 
   /* ---- CURRENT LEAGUE STATUS (the badge on the front page) ------------
@@ -56,7 +55,7 @@ DATSU.config = {
     matchFormat: "Best of 3 legs",
     game1: "701",
     game2: "Cricket",
-    game3: "Cork winner's choice — 701 or Cricket",
+    game3: "Choice based on cork",
 
     /* Top N in each group make the playoffs.
        This is the ONLY playoff number you need to set.
@@ -88,19 +87,41 @@ DATSU.config = {
   quips: [
     "Nice one.",
     "Excellent grouping, Mr Speaker.",
-    "That's a lovely 26.",
-    "He's gone for the big fish and found the 5.",
-    "Cork again, nobody saw that.",
-    "Nice one. Genuinely. Well done."
+    "That's a lovely 26."
   ],
 
   /* ---- GOOGLE SHEET (optional — see docs/GOOGLE-SHEET.md) -------------
      Leave enabled: false until you've followed that guide.
      When enabled, the site reads live data from your sheet instead of
-     the local files, and falls back to the local files if anything fails. */
+     the local files, and falls back to the local files if anything fails.
+
+     historyCsvUrl works independently of `enabled` above — it's just the
+     optional "History" tab that feeds Career averages, so you can point it
+     at a sheet even if this season's Players/Matches stay in the local
+     files. Leave it blank to use data/history.js instead. See
+     docs/GOOGLE-SHEET.md and data/history-example.csv.                   */
   sheet: {
     enabled: false,
     playersCsvUrl: "",
-    matchesCsvUrl: ""
+    matchesCsvUrl: "",
+    historyCsvUrl: ""
+  },
+
+  /* ---- SUBMIT A RESULT (optional — see docs/SUBMIT-RESULTS.md) --------
+     Lets anyone with the passcode log a result from their phone at the
+     bar (submit.html) instead of editing data/matches.js by hand. It
+     posts straight into the Google Sheet above, so it only makes sense
+     once that's set up.
+
+     submitUrl   the Google Apps Script "Web app" URL from that guide.
+                 Leave it blank and the Submit Result page just explains
+                 how to set it up instead of showing the form — nothing
+                 else on the site depends on this.
+
+     The actual passcode is set INSIDE the Apps Script, not here — this
+     file is public source code, so anything typed in it can be read by
+     anyone who views the page source.                                   */
+  resultsForm: {
+    submitUrl: ""
   }
 };

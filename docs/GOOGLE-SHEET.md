@@ -14,6 +14,16 @@ this page shows you how. It takes about 15 minutes, once.
 
 ---
 
+There's also a third, entirely separate tab you can add later — **History** —
+which powers the [Career averages](#optional-a-third-tab-history-for-career-averages)
+section of the Stats page. Skip straight to that section if all you want is
+career stats and you're happy running the rest of the site off the local files.
+
+Once this is set up, you can also add [docs/SUBMIT-RESULTS.md](SUBMIT-RESULTS.md)
+on top of it — a phone-friendly form (`submit.html`) that writes straight into
+the `Matches`/`History` tabs below, instead of anyone needing to open the
+sheet directly. Entirely optional, and built on exactly what this page sets up.
+
 ## Step 1 — Create the sheet
 
 Make a new Google Sheet with **two tabs**, named exactly `Players` and `Matches`.
@@ -22,13 +32,17 @@ Make a new Google Sheet with **two tabs**, named exactly `Players` and `Matches`
 
 Row 1 must be these headings, in this order:
 
-| id | name | dartslive | country | flag | group | avatar | notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| yuki | 田中ユキ | YUKI★ | Japan | 🇯🇵 | A | | 2024 Autumn champion |
-| alex | Alex Fielding | GAZZA | England | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | A | | |
+| id | name | dartslive | country | flag | group | avatar | active | notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| yuki | 田中ユキ | YUKI★ | Japan | 🇯🇵 | A | | | 2024 Autumn champion |
+| alex | Alex Fielding | GAZZA | England | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | A | | | |
 
 - `id` — short, lowercase, no spaces. Never change it mid-season.
 - `avatar` — leave blank unless you've added a photo file.
+- `active` — leave **blank** for a current player. Type `FALSE` for someone
+  who's left the league — their groups/tables/bracket entry disappears, but
+  their name and career stats stay intact for good. See
+  [docs/UPDATING.md](UPDATING.md#2a-removing-a-player) for the full explanation.
 - `notes` — separate multiple honours with a vertical bar: `Champion 2024|Best MPR`
 
 ### The `Matches` tab
@@ -77,6 +91,43 @@ sheet: {
 
 Save, refresh the site. That's it — the league now runs off your sheet.
 
+## Optional: a third tab, `History`, for Career averages
+
+The Stats page has a **Career averages** section that combines this season's
+results with every past league and tournament, so it can work out one
+lifetime PPD/MPR per player instead of just this season's. It reads that
+old data from `data/history.js` by default — see that file for instructions.
+
+If you'd rather keep it in the same sheet as everything else, add a third tab
+called `History` with **exactly the same sixteen columns as the `Matches`
+tab** (date, group, playerA, playerB, then the three legs). A ready-made
+example is in [`data/history-example.csv`](../data/history-example.csv) —
+open it, copy the rows into the `History` tab, then overwrite them with your
+real old results.
+
+A couple of things that only apply to this tab:
+
+- `group` can be left **blank** for anything that wasn't a group-league
+  match (e.g. a knockout tournament final). Career totals don't use it —
+  it only matters for this season's group tables.
+- Publish this tab the same way (**File → Share → Publish to web** →
+  pick `History` → CSV → Publish), then paste the link into `historyCsvUrl`
+  in `data/config.js`:
+
+  ```js
+  sheet: {
+    enabled: false,          // this can stay false
+    playersCsvUrl: "",
+    matchesCsvUrl: "",
+    historyCsvUrl: "PASTE_THE_HISTORY_LINK_HERE"
+  }
+  ```
+
+  This is **independent of `enabled`** above it — you can pull career
+  history from a sheet even if this season's Players/Matches stay in the
+  local files, or the other way round. Whichever bit you leave blank just
+  falls back to its local file.
+
 ## How to tell which one it's using
 
 Right-click the page → *Inspect* → *Console* tab, and type:
@@ -89,6 +140,16 @@ DATSU.dataSource
 - `"local"` — reading the data files (sheet is turned off)
 - `"local-fallback"` — the sheet failed, so it used the files instead. The
   console will also show a warning explaining why.
+
+The `History` tab has its own, separate flag, since it's switched on and off
+independently of the rest:
+
+```
+DATSU.historySource
+```
+
+Same three possible values, same meaning, just for career results instead
+of this season's.
 
 ## Things worth knowing
 

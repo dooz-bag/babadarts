@@ -197,7 +197,7 @@
     set("hero-art", D.logoSvg("100%"));
 
     set("hero-chips",
-      '<span class="chip"><strong>' + D.players.length + '</strong> players</span>' +
+      '<span class="chip"><strong>' + D.activePlayers().length + '</strong> players</span>' +
       '<span class="chip"><strong>' + groups.length + '</strong> group' + (groups.length === 1 ? '' : 's') + '</span>' +
       '<span class="chip"><strong>' + U.esc(cfg.rules.matchFormat) + '</strong></span>' +
       '<span class="chip">' + U.esc(cfg.rules.game1) + ' \u2192 ' + U.esc(cfg.rules.game2) + ' \u2192 <strong>cork choice</strong></span>' +
@@ -387,13 +387,13 @@
     { key: "bestCricket", label: "Best Cricket", type: "num", dp: 2 }
   ];
 
-  D.pages.stats = function () {
-    /* ---------------------------------------- the big sortable table --- */
-    var data = D.allStats().map(function (s) {
+  // Same shape whether it's this season's stats or a player's whole career.
+  function statsRowsFrom(statsList) {
+    return statsList.map(function (s) {
       return {
         player: s.player,
         name: s.player.name,
-        group: s.player.group,
+        group: s.player.group === "?" ? "\u2013" : s.player.group,
         played: s.played, won: s.won, lost: s.lost,
         winPct: s.winPct, ppd: s.ppd, mpr: s.mpr, index: s.index,
         best01: s.best01 ? s.best01.value : null,
@@ -402,8 +402,12 @@
         formSort: s.form.slice(0, 5).join("")
       };
     });
+  }
 
-    var sortKey = "index", sortDir = -1;
+  // Builds one sortable stats table into `containerId`. Used for both this
+  // season's table and the career/all-time one — same columns, different data.
+  function buildSortableStatsTable(containerId, tableId, data, defaultSortKey) {
+    var sortKey = defaultSortKey || "index", sortDir = -1;
 
     function draw() {
       data.sort(function (x, y) {
@@ -440,11 +444,11 @@
           '</tr>';
       }).join("");
 
-      set("stats-table",
-        '<div class="table-wrap"><table class="data sortable" id="statsTable">' +
+      set(containerId,
+        '<div class="table-wrap"><table class="data sortable" id="' + tableId + '">' +
         '<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>');
 
-      var table = $("statsTable");
+      var table = $(tableId);
       if (!table) return;
       table.querySelectorAll("thead th").forEach(function (th) {
         th.addEventListener("click", function () {
@@ -457,6 +461,11 @@
     }
 
     draw();
+  }
+
+  D.pages.stats = function () {
+    /* ---------------------------------------- the big sortable table --- */
+    buildSortableStatsTable("stats-table", "statsTable", statsRowsFrom(D.allStats()), "index");
 
     set("stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
@@ -515,17 +524,39 @@
           '</tr>';
       }).join("") + '</tbody></table></div>'
       : '<p class="muted">No past competitions recorded yet.</p>');
+
+    /* -------------------------------------------------- career averages --- */
+    var history = D.history || [];
+    var careerRows = statsRowsFrom(D.allCareerStats());
+
+    set("career-intro", history.length
+      ? 'Every league and tournament on record combined \u2014 this season plus ' +
+        history.length + ' logged result' + (history.length === 1 ? '' : 's') + ' from before it. ' +
+        'Add old results to data/history.js (or a History sheet) and these numbers update themselves.'
+      : 'This will combine every season and tournament a player has ever played, the moment old ' +
+        'results go into data/history.js (or a History sheet). Right now it just matches this season, ' +
+        'because nothing has been logged yet.');
+
+    var CL = D.careerLeaders();
+    leaderTint = 0;
+    set("records-alltime",
+      leaderCard("Best 01 \u2014 career average", CL.best01, "PPD") +
+      leaderCard("Best cricket \u2014 career average", CL.bestCricket, "MPR") +
+      leaderCard("Best overall \u2014 career", CL.bestOverall, "DATSU Index"));
+
+    buildSortableStatsTable("career-table", "careerTable", careerRows, "played");
   };
 
   /* ========================================================== PLAYERS === */
 
   D.pages.players = function () {
     var groups = D.groups();
+    var active = D.activePlayers();
     var countries = {};
-    D.players.forEach(function (p) { if (p.country) countries[p.country] = 1; });
+    active.forEach(function (p) { if (p.country) countries[p.country] = 1; });
 
     set("players-intro",
-      'All ' + D.players.length + ' of us, from ' + Object.keys(countries).length +
+      'All ' + active.length + ' of us, from ' + Object.keys(countries).length +
       ' countries, split into ' + groups.length + ' group' + (groups.length === 1 ? '' : 's') +
       '. Averages update automatically as results come in.');
 
@@ -680,5 +711,217 @@
     }
 
     set("join-contact", html);
+  };
+
+  /* =========================================================== SUBMIT === */
+  /* A phone-friendly form so results can be logged from the bar instead of
+     editing data/matches.js by hand. It only appears once an admin has
+     wired up docs/SUBMIT-RESULTS.md — until then this page just explains
+     how to do that. Nothing about it is required for the rest of the site
+     to work.                                                              */
+
+  function pad2(n) { return n < 10 ? "0" + n : String(n); }
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function submitSetupCardHtml() {
+    return '<div class="card card-accent-warm">' +
+      '<h3 class="accent-warm">This form isn\u2019t wired up yet</h3>' +
+      '<p>It posts results straight into the Google Sheet behind the site, so it needs a one-off ' +
+      '15-minute setup first \u2014 a small Google Apps Script and a passcode you choose yourself.</p>' +
+      '<p>Whoever runs the site should open <code>docs/SUBMIT-RESULTS.md</code> and follow it through, ' +
+      'then paste the resulting URL into <code>resultsForm.submitUrl</code> in <code>data/config.js</code>.</p>' +
+      '<p class="muted tiny">Until then, results go in the normal way \u2014 straight into ' +
+      '<code>data/matches.js</code>, or typed into the Matches tab of the Google Sheet if one is ' +
+      'already set up (see <code>docs/GOOGLE-SHEET.md</code>).</p>' +
+      '</div>';
+  }
+
+  function legFieldsetHtml(n, defaultGame) {
+    var unit = defaultGame === "cricket" ? "MPR" : "PPD";
+    var g1 = U.esc(D.config.rules.game1), g2 = U.esc(D.config.rules.game2);
+    return '<fieldset class="leg-fields">' +
+      '<legend>Leg ' + n + (n === 3 ? ' <span class="muted">\u2014 only if it went to a decider</span>' : '') + '</legend>' +
+      '<div class="field-row">' +
+      '<div class="field"><label for="rf-g' + n + '-game">Game</label>' +
+      '<select id="rf-g' + n + '-game">' +
+      '<option value="701"' + (defaultGame === "701" ? ' selected' : '') + '>' + g1 + '</option>' +
+      '<option value="cricket"' + (defaultGame === "cricket" ? ' selected' : '') + '>' + g2 + '</option>' +
+      '</select></div>' +
+      '<div class="field"><label for="rf-g' + n + '-winner">Winner</label>' +
+      '<select id="rf-g' + n + '-winner"><option value="">\u2013</option></select></div>' +
+      '<div class="field"><label id="rf-g' + n + '-a-label" for="rf-g' + n + '-a">' + unit + ' (A)</label>' +
+      '<input type="number" step="0.01" min="0" inputmode="decimal" id="rf-g' + n + '-a"></div>' +
+      '<div class="field"><label id="rf-g' + n + '-b-label" for="rf-g' + n + '-b">' + unit + ' (B)</label>' +
+      '<input type="number" step="0.01" min="0" inputmode="decimal" id="rf-g' + n + '-b"></div>' +
+      '</div></fieldset>';
+  }
+
+  function submitFormHtml() {
+    var players = D.activePlayers().slice().sort(function (x, y) { return x.name.localeCompare(y.name); });
+    var groups = D.groups();
+    var cfg = D.config;
+
+    var playerOpts = '<option value="">Choose\u2026</option>' + players.map(function (p) {
+      return '<option value="' + U.esc(p.id) + '">' + U.esc(p.flag) + ' ' + U.esc(p.name) + '</option>';
+    }).join("");
+
+    var groupOpts = '<option value="">\u2013</option>' + groups.map(function (g) {
+      return '<option value="' + U.esc(g) + '">Group ' + U.esc(g) + '</option>';
+    }).join("");
+
+    var sheetWarning = (!cfg.sheet || !cfg.sheet.enabled)
+      ? '<p class="muted tiny">Heads up: this site is currently reading this season\u2019s results from ' +
+        '<code>data/matches.js</code>, not the Google Sheet, so anything submitted here won\u2019t show up on ' +
+        'the site until <code>sheet.enabled</code> is turned on in <code>data/config.js</code> ' +
+        '(see <code>docs/GOOGLE-SHEET.md</code>). It still saves to the sheet either way.</p>'
+      : '';
+
+    return sheetWarning +
+      '<form id="resultForm" class="card">' +
+      '<div class="field-row">' +
+      '<div class="field"><label for="rf-date">Date</label><input type="date" id="rf-date" value="' + todayIso() + '" required></div>' +
+      '<div class="field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
+      '<div class="field checkbox-field"><label><input type="checkbox" id="rf-backfill"> Old result, from before this season</label></div>' +
+      '</div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label for="rf-a">Player A</label><select id="rf-a">' + playerOpts + '</select></div>' +
+      '<div class="field"><label for="rf-b">Player B</label><select id="rf-b">' + playerOpts + '</select></div>' +
+      '</div>' +
+      legFieldsetHtml(1, "701") +
+      legFieldsetHtml(2, "cricket") +
+      legFieldsetHtml(3, "701") +
+      '<div class="field-row">' +
+      '<div class="field"><label for="rf-passcode">League passcode</label>' +
+      '<input type="password" id="rf-passcode" autocomplete="off" required></div>' +
+      '</div>' +
+      '<div id="rf-msg" class="form-msg" aria-live="polite"></div>' +
+      '<div class="btn-row"><button type="submit" class="btn" id="rf-submit">Submit result</button></div>' +
+      '</form>';
+  }
+
+  function wireSubmitForm(submitUrl) {
+    var form = $("resultForm");
+    if (!form) return;
+    var msg = $("rf-msg"), btn = $("rf-submit");
+
+    function showMsg(kind, text) {
+      msg.className = "form-msg is-" + kind;
+      msg.textContent = text;
+    }
+    function showErr(text) { showMsg("err", text); return false; }
+
+    function refreshWinnerOptions() {
+      var aId = $("rf-a").value, bId = $("rf-b").value;
+      [1, 2, 3].forEach(function (n) {
+        var sel = $("rf-g" + n + "-winner");
+        var current = sel.value;
+        sel.innerHTML = '<option value="">\u2013</option>' +
+          (aId ? '<option value="' + U.esc(aId) + '">' + U.esc(D.player(aId).name) + '</option>' : '') +
+          (bId ? '<option value="' + U.esc(bId) + '">' + U.esc(D.player(bId).name) + '</option>' : '');
+        sel.value = (current === aId || current === bId) ? current : "";
+      });
+    }
+
+    $("rf-a").addEventListener("change", function () {
+      refreshWinnerOptions();
+      var groupSel = $("rf-group");
+      if (!groupSel.dataset.touched && this.value) groupSel.value = D.player(this.value).group || "";
+    });
+    $("rf-b").addEventListener("change", refreshWinnerOptions);
+    $("rf-group").addEventListener("change", function () { this.dataset.touched = "1"; });
+
+    [1, 2, 3].forEach(function (n) {
+      $("rf-g" + n + "-game").addEventListener("change", function () {
+        var unit = this.value === "cricket" ? "MPR" : "PPD";
+        $("rf-g" + n + "-a-label").textContent = unit + " (A)";
+        $("rf-g" + n + "-b-label").textContent = unit + " (B)";
+      });
+    });
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      showMsg("", "");
+
+      var date = $("rf-date").value;
+      var isHistory = $("rf-backfill").checked;
+      var group = $("rf-group").value;
+      var aId = $("rf-a").value, bId = $("rf-b").value;
+
+      if (!date) return showErr("Pick a date.");
+      if (!aId || !bId) return showErr("Pick both players.");
+      if (aId === bId) return showErr("Player A and Player B can\u2019t be the same person.");
+      if (!isHistory && !group) return showErr("Pick a group \u2014 or tick \u201cOld result\u201d if this isn\u2019t part of the current season.");
+
+      var legs = [];
+      for (var n = 1; n <= 3; n++) {
+        var game = $("rf-g" + n + "-game").value;
+        var winner = $("rf-g" + n + "-winner").value;
+        var aStat = $("rf-g" + n + "-a").value;
+        var bStat = $("rf-g" + n + "-b").value;
+        var anyFilled = winner || aStat !== "" || bStat !== "";
+        var allFilled = winner && aStat !== "" && bStat !== "";
+
+        if (n <= 2 && !allFilled) return showErr("Fill in leg " + n + " completely \u2014 game, winner and both averages.");
+        if (n === 3 && anyFilled && !allFilled) return showErr("Leg 3 is half filled in \u2014 either finish it, or leave it all blank for a 2\u20130.");
+        if (allFilled) legs.push({ game: game, winner: winner, aStat: parseFloat(aStat), bStat: parseFloat(bStat) });
+      }
+
+      var winsA = legs.filter(function (l) { return l.winner === aId; }).length;
+      var winsB = legs.filter(function (l) { return l.winner === bId; }).length;
+      if (legs.length === 2 && winsA !== 2 && winsB !== 2) {
+        return showErr("Two legs in but nobody\u2019s won both \u2014 add leg 3, or double check the winners.");
+      }
+      if (legs.length === 3 && Math.max(winsA, winsB) !== 2) {
+        return showErr("Three legs in, but that doesn\u2019t add up to a 2\u20131. Double check the winners.");
+      }
+
+      var payload = {
+        passcode: $("rf-passcode").value,
+        target: isHistory ? "history" : "matches",
+        date: date, group: group, a: aId, b: bId, legs: legs
+      };
+
+      btn.disabled = true;
+      showMsg("pending", "Sending\u2026");
+
+      fetch(submitUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight Apps Script can't answer
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          btn.disabled = false;
+          if (res && res.ok) {
+            showMsg("ok", "Result submitted \u2014 nice one. It can take a few minutes to show up on the site (that\u2019s Google caching the sheet, not this site being slow).");
+            form.reset();
+            refreshWinnerOptions();
+            delete $("rf-group").dataset.touched;
+            [1, 2, 3].forEach(function (n) {
+              $("rf-g" + n + "-a-label").textContent = (n === 2 ? "MPR" : "PPD") + " (A)";
+              $("rf-g" + n + "-b-label").textContent = (n === 2 ? "MPR" : "PPD") + " (B)";
+            });
+          } else {
+            showMsg("err", (res && res.error) || "The sheet said no \u2014 check the passcode and try again.");
+          }
+        })
+        .catch(function () {
+          btn.disabled = false;
+          showMsg("err", "Couldn\u2019t reach the sheet \u2014 check your connection and try again.");
+        });
+    });
+  }
+
+  D.pages.submit = function () {
+    var cfg = D.config.resultsForm || {};
+    if (!cfg.submitUrl) {
+      set("submit-body", submitSetupCardHtml());
+      return;
+    }
+    set("submit-body", submitFormHtml());
+    wireSubmitForm(cfg.submitUrl);
   };
 })();

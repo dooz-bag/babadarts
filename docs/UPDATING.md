@@ -1,13 +1,14 @@
 # How to update the website
 
 You never need to touch the design or the code. Everything you'll ever change
-lives in the **`data`** folder, in four files:
+lives in the **`data`** folder, in five files:
 
 | File | What it's for |
 | --- | --- |
 | `data/config.js` | League name, venue, contact details, current status, rules |
 | `data/players.js` | The roster |
-| `data/matches.js` | Match results |
+| `data/matches.js` | This season's match results |
+| `data/history.js` | Past results, for career averages (see section 4b) |
 | `data/archive.js` | Past leagues and tournaments |
 
 **The golden rule:** only change text *between the quote marks*. Leave the
@@ -18,6 +19,11 @@ If something ever looks broken, press `Ctrl + Z` until it works again.
 ---
 
 ## 1. Adding a match result
+
+> If someone has set up [docs/SUBMIT-RESULTS.md](SUBMIT-RESULTS.md), there's an
+> easier way to do this from a phone at the bar: `submit.html`. It writes
+> results into the same place a Google Sheet would, so everything below still
+> applies if you're editing files by hand instead (or the form isn't set up).
 
 Open `data/matches.js`. Scroll to the bottom of the list and add a line like
 this, just above the final `];`
@@ -69,6 +75,25 @@ Open `data/players.js`, copy an existing line, and change it:
 
 Groups do **not** have to be the same size. Matches-per-player is worked out
 from however many people are in each group, so a 10 v 11 season is fine.
+
+## 2a. Removing a player
+
+Someone leaving mid-season? **Don't delete their line.** Add `active: false`
+to it instead:
+
+```js
+{ id: "newguy", name: "New Guy", dartslive: "NEWBIE", country: "Canada", flag: "🇨🇦", group: "B", avatar: "", active: false, notes: [] },
+```
+
+That drops them out of the groups, the current league table, the playoff
+bracket and the player dropdowns on the Submit Result form — but keeps their
+name, flag and avatar attached to every result they've already played, so
+Career averages on the Stats page still remembers them properly. Delete their
+line entirely and their past results would show up attributed to a nameless
+player instead, which is worse.
+
+Leaving the `active` field off a line at all counts as `true` (i.e. current),
+so you never need to add it to players who are still around.
 
 ## 2b. Changing how many players make the playoffs
 
@@ -127,6 +152,49 @@ When a league finishes, add a new block to `data/archive.js`. Copy the whole
 Then reset `data/matches.js` for the new season — delete the old match lines
 (keep the `m(...)` explanation at the top) and start again.
 
+**Before you delete them, copy those match lines into `data/history.js`
+instead of just deleting them** — that's what keeps career averages accurate.
+See the next section.
+
+## 4b. Backfilling old results (Career averages)
+
+The Stats page has a **Career averages** table and leaderboard that combines
+*every* league and tournament a player has ever played, not just the current
+season. It's worked out automatically from two things added together:
+
+- `data/matches.js` — this season, as normal
+- `data/history.js` — everything before it
+
+So the moment you archive a season (section 4, above), move that season's
+results out of `data/matches.js` and into `data/history.js` rather than
+deleting them. Same exact shape, same `m(...)` helper — just a different file:
+
+```js
+// in data/history.js
+m("2024-10-07", "A", "alex", "yuki", [
+  ["701",     "alex", 23.8, 21.0],
+  ["cricket", "yuki",  2.10, 2.35],
+  ["701",     "yuki", 21.5, 22.9]
+]),
+```
+
+**Got a pile of even older results you never entered at all** (an old
+spreadsheet, old scoresheets, a previous version of this site)? You don't have
+to type them in one by one. Two options:
+
+- Add them to `data/history.js` by hand, same shape as above — a rough backfill
+  from memory or old screenshots is completely fine, this is for bragging
+  rights, not an audit.
+- Or, if you'd rather work in a spreadsheet, use
+  `data/history-example.csv` as a template — open it to see the exact column
+  layout, fill in your own rows, and either convert it into `history.js`
+  lines or publish it as a Google Sheet tab (see `docs/GOOGLE-SHEET.md` →
+  "a third tab, History"). Either way the site reads it the same way.
+
+Either way, save and refresh — no other page changes. The current league
+table, this season's stats and the playoff bracket are completely unaffected;
+only the Career averages section on the Stats page grows.
+
 ## 5. Adding photos
 
 1. Put the image file in `assets/img/archive/`
@@ -156,15 +224,55 @@ Server** extension, then right-click `index.html` → *Open with Live Server*.
 ## Publishing
 
 This is a plain website with no build step, so anything that hosts files works.
-The two easiest:
+The project already lives in a git repository — the easiest way to get it live
+is to connect that repository to a host, so every `git push` updates the site
+automatically.
 
-- **Netlify Drop** — go to <https://app.netlify.com/drop> and drag the whole
-  project folder onto the page. Done, and free.
-- **GitHub Pages** — push the folder to a GitHub repository, then
-  *Settings → Pages → Deploy from branch → main → / (root)*.
+### GitHub Pages (simplest — stays entirely in GitHub)
 
-To update a live site afterwards you edit the data file, save, and re-upload
-(or `git push`).
+1. Push the repository to GitHub, if you haven't already:
+
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+   git push -u origin main
+   ```
+
+2. On GitHub: **Settings → Pages**
+3. Under *Build and deployment*, set **Source: Deploy from a branch**
+4. Branch: `main`, folder: `/ (root)` → **Save**
+
+It'll be live within a minute or two at
+`https://YOUR_USERNAME.github.io/YOUR_REPO/`.
+
+### Cloudflare Pages (a custom domain, still free)
+
+1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**
+2. Pick your repository
+3. Build settings: leave the **build command blank** — it's a static site,
+   there's nothing to build. Output directory: `/`
+4. **Save and Deploy**
+
+You'll get a `*.pages.dev` address immediately, with a real domain attachable
+later for free.
+
+### Netlify Drop (no git required, but no auto-updates either)
+
+Go to <https://app.netlify.com/drop> and drag the whole project folder onto
+the page. Done, and free — but every future change means dragging the folder
+on again, since it isn't connected to the repository.
+
+### Updating a live site afterwards
+
+If you used GitHub Pages or Cloudflare Pages, updating is just:
+
+```bash
+git add -A
+git commit -m "add match results"
+git push
+```
+
+and the live site rebuilds itself, usually within a minute. If you used
+Netlify Drop instead, you re-drag the folder.
 
 ---
 

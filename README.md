@@ -22,10 +22,11 @@ It's written for someone who has never opened a code file before.
 | `index.html` | Current league status, latest results, the race, top performers |
 | `league.html` | Full Group A and Group B tables with playoff cut-lines |
 | `playoffs.html` | Live projected bracket + who's safe and who's sweating |
-| `stats.html` | Sortable table of every average, plus season leaders, single-game records and the roll of honour |
+| `stats.html` | Sortable table of every average, season leaders, single-game records, career averages across every league/tournament, and the roll of honour |
 | `players.html` | The roster — names, DARTSLIVE cards, nationalities, honours |
 | `archive.html` | Every past league and tournament |
 | `season.html` | One reusable page that renders *any* archived season |
+| `submit.html` | Optional phone-friendly form to log a result straight into the Google Sheet |
 | `join.html` | How to join, where we are, how to reach us on LINE |
 
 ## Where the data lives
@@ -33,10 +34,12 @@ It's written for someone who has never opened a code file before.
 Everything you edit is in `data/`. Nothing else needs touching.
 
 ```
-data/config.js     league name, venue, contact details, current status, rules
-data/players.js    the roster
-data/matches.js    match results
-data/archive.js    past leagues and tournaments
+data/config.js            league name, venue, contact details, current status, rules
+data/players.js           the roster
+data/matches.js           this season's match results
+data/history.js           past results, so "Career averages" covers every season ever played
+data/history-example.csv  template for bulk-adding old results (by hand or via a Google Sheet)
+data/archive.js           past leagues and tournaments
 ```
 
 The league table, every average, the records and the playoff bracket are all
@@ -63,8 +66,11 @@ extension: right-click `index.html` → *Open with Live Server*.
 
 ## Publishing
 
-Drag the folder onto <https://app.netlify.com/drop>, or push to GitHub and turn
-on GitHub Pages. See [docs/UPDATING.md](docs/UPDATING.md#publishing).
+This is a static site living in a git repo, so the easiest setup is connecting
+that repo to a host so every `git push` deploys itself — **GitHub Pages** or
+**Cloudflare Pages** both work with zero build configuration. Netlify Drop also
+works if you'd rather not use git at all.
+See [docs/UPDATING.md](docs/UPDATING.md#publishing) for step-by-step instructions.
 
 ## Optional: run it from a Google Sheet
 
@@ -72,6 +78,11 @@ If you'd rather type results into a phone at the bar, you can point the site at
 a published Google Sheet instead of the data files — with an automatic fallback
 to the local files if the sheet is ever unavailable.
 See [docs/GOOGLE-SHEET.md](docs/GOOGLE-SHEET.md). Entirely optional.
+
+On top of that, [docs/SUBMIT-RESULTS.md](docs/SUBMIT-RESULTS.md) wires up
+`submit.html` — a form so anyone with a shared passcode can log a result
+straight into that sheet from their phone, no editing files at all. Also
+entirely optional, and built on whatever the Google Sheet guide already set up.
 
 ## Project structure
 

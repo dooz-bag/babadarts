@@ -68,6 +68,7 @@
     { href: "playoffs.html", label: "Playoffs", page: "playoffs" },
     { href: "stats.html", label: "Stats &amp; Records", page: "stats" },
     { href: "players.html", label: "Players", page: "players" },
+    { href: "submit.html", label: "Submit Result", page: "submit" },
     { href: "join.html", label: "Join Us", page: "join" }
   ];
 
@@ -131,7 +132,9 @@
       '        <li><a href="playoffs.html">Playoff picture</a></li>' +
       '        <li><a href="stats.html">Everyone\'s averages</a></li>' +
       '        <li><a href="stats.html#records">Records &amp; honours</a></li>' +
+      '        <li><a href="stats.html#career">Career averages</a></li>' +
       '        <li><a href="archive.html">The archive</a></li>' +
+      '        <li><a href="submit.html">Submit a result</a></li>' +
       '        <li><a href="join.html">How to join</a></li>' +
       '      </ul>' +
       '    </div>' +
