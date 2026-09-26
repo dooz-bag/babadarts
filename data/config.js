@@ -102,8 +102,8 @@ DATSU.config = {
      docs/GOOGLE-SHEET.md and data/history-example.csv.                   */
   sheet: {
     enabled: false,
-    playersCsvUrl: "",
-    matchesCsvUrl: "",
+    playersCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pubhtml?gid=0&single=true",
+    matchesCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=958369008&single=true&output=csv",
     historyCsvUrl: ""
   },
 
@@ -122,6 +122,6 @@ DATSU.config = {
      file is public source code, so anything typed in it can be read by
      anyone who views the page source.                                   */
   resultsForm: {
-    submitUrl: ""
+    submitUrl: "https://script.google.com/macros/s/AKfycbzJSFdt1xyYcXBLhe-2tjqFTb0BZKbgyd-YhlRN56wc6ictP6-FLxSC1KGPPHUohIUz5A/exec"
   }
 };
