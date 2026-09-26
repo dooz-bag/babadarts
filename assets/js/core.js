@@ -185,12 +185,18 @@
     var out = {
       id: pid, played: 0, won: 0, lost: 0,
       legsFor: 0, legsAgainst: 0,
+      points: 0,
       ppdList: [], mprList: [],
       ppd: null, mpr: null, index: null,
       best01: null, bestCricket: null,
       games01: 0, gamesCricket: 0,
       form: [] // newest first, "W" / "L"
     };
+
+    var rules = (D.config && D.config.rules) || {};
+    var ptsWin20 = rules.pointsForWin !== undefined ? rules.pointsForWin : 2;
+    var ptsWin21 = rules.pointsForWin21 !== undefined ? rules.pointsForWin21 : 1;
+    var ptsLoss = rules.pointsForLoss !== undefined ? rules.pointsForLoss : 0;
 
     matches.forEach(function (m) {
       if (m.a !== pid && m.b !== pid) return;
@@ -202,8 +208,15 @@
       out.played++;
       out.legsFor += mine;
       out.legsAgainst += theirs;
-      if (mine > theirs) { out.won++; out.form.push("W"); }
-      else { out.lost++; out.form.push("L"); }
+      if (mine > theirs) {
+        out.won++;
+        out.form.push("W");
+        out.points += (theirs === 0 ? ptsWin20 : ptsWin21);
+      } else {
+        out.lost++;
+        out.form.push("L");
+        out.points += ptsLoss;
+      }
 
       (m.legs || []).forEach(function (leg) {
         var v = isA ? leg.aStat : leg.bStat;
@@ -231,11 +244,11 @@
     out.mpr = avg(out.mprList);
     out.winPct = out.played ? (out.won / out.played) * 100 : null;
 
-    // DATSU INDEX — one number combining 01 and cricket form.
-    // 30 PPD and 3.00 MPR would be a perfect 100.
+    // ダーツ INDEX — one number combining 01 and cricket form.
+    // 60 PPD and 2.50 MPR would score 100.
     if (out.ppd !== null || out.mpr !== null) {
-      var p = out.ppd !== null ? Math.min(out.ppd / 30, 1.2) : null;
-      var c = out.mpr !== null ? Math.min(out.mpr / 3, 1.2) : null;
+      var p = out.ppd !== null ? Math.max(0, out.ppd / 60) : null;
+      var c = out.mpr !== null ? Math.max(0, out.mpr / 2.5) : null;
       if (p !== null && c !== null) out.index = (p * 50 + c * 50);
       else out.index = (p !== null ? p : c) * 100;
     }
@@ -291,7 +304,7 @@
           played: s.played, won: s.won, lost: s.lost,
           legsFor: s.legsFor, legsAgainst: s.legsAgainst,
           legDiff: s.legsFor - s.legsAgainst,
-          points: s.won * rules.pointsForWin + s.lost * rules.pointsForLoss,
+          points: s.points,
           ppd: s.ppd, mpr: s.mpr
         };
       });

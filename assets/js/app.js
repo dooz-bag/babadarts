@@ -97,9 +97,7 @@
     return '' +
       '<div class="header-inner">' +
       '  <a class="brand" href="index.html">' + D.logoSvg(34) +
-      '    <span class="brand-text">' + U.esc(cfg.leagueShortName) +
-      '      <small>' + U.esc(cfg.venue.name) + '</small>' +
-      '    </span>' +
+      '    <span class="brand-text">' + U.esc(cfg.leagueShortName) + '</span>' +
       '  </a>' +
       '  <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="mainNav">MENU</button>' +
       '  <nav class="nav" id="mainNav">' + links + archiveMenu + '</nav>' +

@@ -241,7 +241,7 @@
     set("home-leaders",
       leaderCard("Best 01 average", L.best01, "01 Avg") +
       leaderCard("Best cricket average", L.bestCricket, "Cricket Avg") +
-      leaderCard("Best overall index", L.bestOverall, "DATSU Index"));
+      leaderCard("Best overall index", L.bestOverall, "ダーツ Index"));
 
     /* Photos of the bar. Drop real files into assets/img/hub/ to replace
        the placeholders — the file names are shown on screen. */
@@ -265,8 +265,8 @@
 
     set("league-intro",
       'Top <strong>' + shape.perGroup + '</strong> in each group make the playoffs. ' + byeLine +
-      'A win is worth <strong>' + rules.pointsForWin + '</strong> points; ties are split by ' +
-      '<strong>leg difference</strong>, then a <strong>head-to-head decider leg</strong>.');
+      'A 2\u20130 win is worth <strong>2 points</strong>, a 2\u20131 win is worth <strong>1 point</strong>; ' +
+      'ties are split by <strong>leg difference</strong>, then a <strong>head-to-head decider leg</strong>.');
 
     var legend =
       '<div class="legend">' +
@@ -470,11 +470,10 @@
     set("stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
       '<p><strong>01 Avg (PPD)</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
-      ' legs, straight from DARTSLIVE. Higher is better; 20 is respectable, 25+ is showing off.</p>' +
-      '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket. 2.00 is solid, 3.00 means you are ' +
-      'not to be trifled with.</p>' +
-      '<p><strong>Index</strong> \u2014 our own single number combining the two, where 30 PPD and ' +
-      '3.00 MPR would score a perfect 100. Purely for arguing purposes.</p>' +
+      ' legs, stats from DARTSLIVE result screen. Higher is better.</p>' +
+      '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket.</p>' +
+      '<p><strong>ダーツ Index</strong> \u2014 our own single number combining the two, where 60 PPD in 01 and ' +
+      '2.5 MPR in cricket would score 100.</p>' +
       '<p class="muted tiny">Tap any column heading to re-sort the table.</p></div>');
 
     /* ------------------------------------------- records and honours --- */
@@ -482,7 +481,7 @@
 
     leaderTint = 0;
     set("records-season",
-      leaderCard("Best overall index", L.bestOverall, "DATSU Index") +
+      leaderCard("Best overall index", L.bestOverall, "ダーツ Index") +
       leaderCard("Best 01 average", L.best01, "01 Avg", "season") +
       leaderCard("Best cricket average", L.bestCricket, "Cricket Avg", "season") +
       leaderCard("Most wins", L.mostWins, "matches won") +
@@ -494,6 +493,7 @@
       leaderCard("Highest single cricket game", L.highCricketGame, "MPR",
         L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
+    /*
     set("records-fun",
       '<div class="leader tint-accent-gold">' +
       '<div class="cat">The \u201cNice One\u201d Award</div>' +
@@ -507,6 +507,7 @@
       '<div class="who">' + (L.mrSpeaker ? U.esc(L.mrSpeaker.stats.player.flag + " " + L.mrSpeaker.stats.player.name) : "Nobody yet") + '</div>' +
       '<div class="sub">Biggest gap between their best game and their average \u2014 three lovely darts, three terrible numbers.</div>' +
       '</div>');
+    */
 
     /* Roll of honour from the archive */
     var champs = (D.archive || []).filter(function (a) { return a.champion; });
@@ -540,7 +541,7 @@
     var CL = D.careerLeaders();
     leaderTint = 0;
     set("records-alltime",
-      leaderCard("Best overall index \u2014 career", CL.bestOverall, "DATSU Index") +
+      leaderCard("Best overall index \u2014 career", CL.bestOverall, "ダーツ Index") +
       leaderCard("Best 01 average \u2014 career", CL.best01, "01 Avg") +
       leaderCard("Best cricket average \u2014 career", CL.bestCricket, "Cricket Avg"));
 

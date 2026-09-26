@@ -51,6 +51,7 @@ DATSU.config = {
   /* ---- Scoring rules -------------------------------------------------- */
   rules: {
     pointsForWin: 2,
+    pointsForWin21: 1,
     pointsForLoss: 0,
     matchFormat: "Best of 3 legs",
     game1: "701",
