@@ -220,12 +220,12 @@
       set("latest-results", '<div class="card"><p class="muted">No results in yet. Get corking.</p></div>');
     }
 
-    /* Mini tables — one per group, however many there are */
+    /* Group tables — one per group, however many there are */
     set("race-intro", 'Top ' + shape.perGroup + ' in each group make the playoffs.');
     set("mini-tables", groups.map(function (g, i) {
       return '<div>' +
         '<h3 class="' + groupAccent(i) + '">Group ' + U.esc(g) + '</h3>' +
-        standingsTable(g, { limit: shape.perGroup, showAverages: false, showOutlook: false }) +
+        standingsTable(g, { showAverages: false, showOutlook: false }) +
         '</div>';
     }).join(""));
 
@@ -239,9 +239,9 @@
     var L = D.leaders();
     leaderTint = 0;
     set("home-leaders",
-      leaderCard("Best 01 average", L.best01, "PPD") +
-      leaderCard("Best cricket average", L.bestCricket, "MPR") +
-      leaderCard("Best overall", L.bestOverall, "DATSU Index"));
+      leaderCard("Best 01 average", L.best01, "01 Avg") +
+      leaderCard("Best cricket average", L.bestCricket, "Cricket Avg") +
+      leaderCard("Best overall index", L.bestOverall, "DATSU Index"));
 
     /* Photos of the bar. Drop real files into assets/img/hub/ to replace
        the placeholders — the file names are shown on screen. */
@@ -375,13 +375,13 @@
   var STAT_COLS = [
     { key: "name", label: "Player", type: "text" },
     { key: "group", label: "Grp", type: "text" },
-    { key: "formSort", label: "Form", type: "text" },
+    { key: "formSort", label: "Last 5", type: "text" },
     { key: "played", label: "P", type: "num", dp: 0 },
     { key: "won", label: "W", type: "num", dp: 0 },
     { key: "lost", label: "L", type: "num", dp: 0 },
     { key: "winPct", label: "Win %", type: "num", dp: 1 },
-    { key: "ppd", label: "01 PPD", type: "num", dp: 2 },
-    { key: "mpr", label: "Cricket MPR", type: "num", dp: 2 },
+    { key: "ppd", label: "01 Avg", type: "num", dp: 2 },
+    { key: "mpr", label: "Cricket Avg", type: "num", dp: 2 },
     { key: "index", label: "Index", type: "num", dp: 1 },
     { key: "best01", label: "Best 01", type: "num", dp: 2 },
     { key: "bestCricket", label: "Best Cricket", type: "num", dp: 2 }
@@ -469,9 +469,9 @@
 
     set("stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
-      '<p><strong>PPD</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
+      '<p><strong>01 Avg (PPD)</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
       ' legs, straight from DARTSLIVE. Higher is better; 20 is respectable, 25+ is showing off.</p>' +
-      '<p><strong>MPR</strong> \u2014 marks per round in cricket. 2.00 is solid, 3.00 means you are ' +
+      '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket. 2.00 is solid, 3.00 means you are ' +
       'not to be trifled with.</p>' +
       '<p><strong>Index</strong> \u2014 our own single number combining the two, where 30 PPD and ' +
       '3.00 MPR would score a perfect 100. Purely for arguing purposes.</p>' +
@@ -482,9 +482,9 @@
 
     leaderTint = 0;
     set("records-season",
-      leaderCard("Best 01 \u2014 season average", L.best01, "PPD") +
-      leaderCard("Best cricket \u2014 season average", L.bestCricket, "MPR") +
-      leaderCard("Best overall", L.bestOverall, "DATSU Index") +
+      leaderCard("Best overall index", L.bestOverall, "DATSU Index") +
+      leaderCard("Best 01 average", L.best01, "01 Avg", "season") +
+      leaderCard("Best cricket average", L.bestCricket, "Cricket Avg", "season") +
       leaderCard("Most wins", L.mostWins, "matches won") +
       leaderCard("Best win rate", L.bestWinPct, "%"));
 
@@ -540,9 +540,9 @@
     var CL = D.careerLeaders();
     leaderTint = 0;
     set("records-alltime",
-      leaderCard("Best 01 \u2014 career average", CL.best01, "PPD") +
-      leaderCard("Best cricket \u2014 career average", CL.bestCricket, "MPR") +
-      leaderCard("Best overall \u2014 career", CL.bestOverall, "DATSU Index"));
+      leaderCard("Best overall index \u2014 career", CL.bestOverall, "DATSU Index") +
+      leaderCard("Best 01 average \u2014 career", CL.best01, "01 Avg") +
+      leaderCard("Best cricket average \u2014 career", CL.bestCricket, "Cricket Avg"));
 
     buildSortableStatsTable("career-table", "careerTable", careerRows, "played");
   };

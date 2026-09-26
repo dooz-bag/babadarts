@@ -27,8 +27,8 @@ DATSU.config = {
 
   /* ---- The venue ------------------------------------------------------ */
   venue: {
-    name: "HUB Takadanobaba",
-    nameJa: "HUB 高田馬場店",
+    name: "HUB (East) Takadanobaba",
+    nameJa: "HUB 高田馬場駅東口店",
     address: "Takadanobaba, Shinjuku-ku, Tokyo",
     mapsUrl: "https://maps.google.com/?q=HUB+Takadanobaba+East"
   },
