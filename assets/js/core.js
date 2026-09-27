@@ -185,18 +185,12 @@
     var out = {
       id: pid, played: 0, won: 0, lost: 0,
       legsFor: 0, legsAgainst: 0,
-      points: 0,
       ppdList: [], mprList: [],
       ppd: null, mpr: null, index: null,
       best01: null, bestCricket: null,
       games01: 0, gamesCricket: 0,
       form: [] // newest first, "W" / "L"
     };
-
-    var rules = (D.config && D.config.rules) || {};
-    var ptsWin20 = rules.pointsForWin !== undefined ? rules.pointsForWin : 2;
-    var ptsWin21 = rules.pointsForWin21 !== undefined ? rules.pointsForWin21 : 1;
-    var ptsLoss = rules.pointsForLoss !== undefined ? rules.pointsForLoss : 0;
 
     matches.forEach(function (m) {
       if (m.a !== pid && m.b !== pid) return;
@@ -211,11 +205,9 @@
       if (mine > theirs) {
         out.won++;
         out.form.push("W");
-        out.points += (theirs === 0 ? ptsWin20 : ptsWin21);
       } else {
         out.lost++;
         out.form.push("L");
-        out.points += ptsLoss;
       }
 
       (m.legs || []).forEach(function (leg) {
@@ -304,13 +296,12 @@
           played: s.played, won: s.won, lost: s.lost,
           legsFor: s.legsFor, legsAgainst: s.legsAgainst,
           legDiff: s.legsFor - s.legsAgainst,
-          points: s.points,
           ppd: s.ppd, mpr: s.mpr
         };
       });
 
     rows.sort(function (x, y) {
-      if (y.points !== x.points) return y.points - x.points;
+      if (y.won !== x.won) return y.won - x.won;
       if (y.legDiff !== x.legDiff) return y.legDiff - x.legDiff;
       if (y.legsFor !== x.legsFor) return y.legsFor - x.legsFor;
       return (y.ppd || 0) - (x.ppd || 0);
@@ -323,25 +314,25 @@
     rows.forEach(function (r, i) {
       r.pos = i + 1;
       r.remaining = Math.max(0, totalRounds - r.played);
-      r.maxPoints = r.points + r.remaining * rules.pointsForWin;
+      r.maxWins = r.won + r.remaining;
       r.zone = r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out";
       // Flag ties that the league would have to break another way
       r.tied = rows.some(function (o) {
-        return o !== r && o.points === r.points && o.legDiff === r.legDiff;
+        return o !== r && o.won === r.won && o.legDiff === r.legDiff;
       });
     });
 
     // Playoff outlook.
     //   couldOutrankMe        - rivals who might still finish above me
     //   definitelyAboveMe     - rivals I can no longer catch
-    // Players level on points are separated by their current table position,
+    // Players level on wins are separated by their current table position,
     // otherwise someone sitting 7th would be told they were safe.
     rows.forEach(function (r) {
       var couldOutrankMe = 0, definitelyAboveMe = 0;
       rows.forEach(function (o) {
         if (o === r) return;
-        if (o.maxPoints > r.points || (o.maxPoints === r.points && o.pos < r.pos)) couldOutrankMe++;
-        if (o.points > r.maxPoints || (o.points === r.maxPoints && o.pos < r.pos)) definitelyAboveMe++;
+        if (o.maxWins > r.won || (o.maxWins === r.won && o.pos < r.pos)) couldOutrankMe++;
+        if (o.won > r.maxWins || (o.won === r.maxWins && o.pos < r.pos)) definitelyAboveMe++;
       });
       if (byeSpots > 0 && couldOutrankMe < byeSpots) r.outlook = "bye";
       else if (couldOutrankMe < playoffSpots) r.outlook = "in";
@@ -610,7 +601,7 @@
       return s;
     });
     stats.sort(function (x, y) {
-      if (y.points !== x.points) return y.points - x.points;
+      if (y.won !== x.won) return y.won - x.won;
       var diffX = x.legsFor - x.legsAgainst, diffY = y.legsFor - y.legsAgainst;
       if (diffY !== diffX) return diffY - diffX;
       return (y.ppd || 0) - (x.ppd || 0);

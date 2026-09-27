@@ -50,7 +50,7 @@ DATSU.config = {
 
   /* ---- Scoring rules -------------------------------------------------- */
   rules: {
-    pointsForWin: 2,
+    pointsForWin: 1,
     pointsForWin21: 1,
     pointsForLoss: 0,
     matchFormat: "Best of 3 legs",
@@ -73,6 +73,7 @@ DATSU.config = {
     playoffSpots: 6,
 
     tiebreakers: [
+      "Match wins",
       "Leg difference",
       "Head-to-head decider leg"
     ],

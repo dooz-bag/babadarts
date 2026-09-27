@@ -47,12 +47,11 @@
         '<td><span class="pos">' + r.pos + '</span></td>' +
         '<td>' + playerCellHtml(r.player) + '</td>' +
         '<td class="num">' + r.played + '</td>' +
-        '<td class="num">' + r.won + '</td>' +
+        '<td class="num"><strong>' + r.won + '</strong></td>' +
         '<td class="num">' + r.lost + '</td>' +
         '<td class="num">' + r.legsFor + '</td>' +
         '<td class="num">' + r.legsAgainst + '</td>' +
         '<td class="num">' + U.signed(r.legDiff) + '</td>' +
-        '<td class="num"><strong>' + r.points + '</strong></td>' +
         (opts.showAverages === false ? '' :
           '<td class="num">' + U.num(r.ppd) + '</td>' +
           '<td class="num">' + U.num(r.mpr) + '</td>') +
@@ -64,12 +63,11 @@
       '<thead><tr>' +
       '<th>#</th><th>Player</th>' +
       '<th class="num" title="Played">P</th>' +
-      '<th class="num" title="Won">W</th>' +
-      '<th class="num" title="Lost">L</th>' +
+      '<th class="num" title="Matches Won">W</th>' +
+      '<th class="num" title="Matches Lost">L</th>' +
       '<th class="num" title="Legs won">LF</th>' +
       '<th class="num" title="Legs lost">LA</th>' +
       '<th class="num" title="Leg difference">+/-</th>' +
-      '<th class="num">Pts</th>' +
       (opts.showAverages === false ? '' : '<th class="num" title="01 average, points per dart">PPD</th><th class="num" title="Cricket average, marks per round">MPR</th>') +
       (opts.showOutlook === false ? '' : '<th>Outlook</th>') +
       '</tr></thead><tbody>' + body + '</tbody></table></div>';
@@ -289,8 +287,8 @@
 
     set("league-intro",
       'Top <strong>' + shape.perGroup + '</strong> in each group make the playoffs. ' + byeLine +
-      'A 2\u20130 win is worth <strong>2 points</strong>, a 2\u20131 win is worth <strong>1 point</strong>; ' +
-      'ties are split by <strong>leg difference</strong>, then a <strong>head-to-head decider leg</strong>.');
+      'Rankings are ordered by <strong>match wins (W)</strong>, with ties decided by <strong>leg difference (+/-)</strong>, ' +
+      'then total legs won, then a <strong>head-to-head decider leg</strong>.');
 
     var legend =
       '<div class="legend">' +
@@ -382,7 +380,7 @@
           ? '<ul class="notes" style="flex-direction:column;align-items:flex-start">' +
           list.map(function (x) {
             return '<li>' + U.esc(x.row.player.flag + " " + x.row.player.name) +
-              ' \u00b7 ' + x.group + x.row.pos + ' \u00b7 ' + x.row.points + ' pts</li>';
+              ' \u00b7 ' + x.group + x.row.pos + ' \u00b7 ' + x.row.won + ' win' + (x.row.won === 1 ? '' : 's') + '</li>';
           }).join("") + '</ul>'
           : '<p class="muted">Nobody yet.</p>') +
         '</div>';
@@ -411,7 +409,7 @@
 
     set("scenario-note",
       '<div class="card card-accent-cool"><h3>How to read the outlook</h3>' +
-      '<p>The site works out the maximum points every player could still reach if they won all of ' +
+      '<p>The site works out the maximum number of match wins every player could still reach if they won all of ' +
       'their remaining matches, then compares that with everyone else. It ignores leg-difference ' +
       'tiebreaks, so treat the labels as a very good guide rather than gospel.</p>' +
       (pairings
