@@ -75,7 +75,7 @@ DATSU.config = {
     tiebreakers: [
       "Match wins",
       "Leg difference",
-      "Head-to-head decider leg"
+      "Head-to-head decider match"
     ],
     playoffFormats: {
       round1: "Best of 3",

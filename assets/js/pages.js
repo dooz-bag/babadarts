@@ -288,7 +288,7 @@
     set("league-intro",
       'Top <strong>' + shape.perGroup + '</strong> in each group make the playoffs. ' + byeLine +
       'Rankings are ordered by <strong>match wins (W)</strong>, with ties decided by <strong>leg difference (+/-)</strong>, ' +
-      'then total legs won, then a <strong>head-to-head decider leg</strong>.');
+      'then a <strong>head-to-head decider match</strong>.');
 
     var legend =
       '<div class="legend">' +
@@ -335,6 +335,24 @@
         L.high01Game ? "v " + D.playerName(L.high01Game.stats.best01.opponent) : "", "accent") +
       leaderCard("Highest single cricket game", L.highCricketGame, "MPR",
         L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
+
+    /* ------------------------------ this season's match history collapse --- */
+    var seasonMatches = D.sortedMatches() || [];
+    if (seasonMatches.length) {
+      set("season-matches-collapse",
+        '<details class="results-collapse">' +
+        '<summary class="results-summary">' +
+        '<span class="results-summary-title">Season match history</span>' +
+        '<span class="results-summary-count">' + seasonMatches.length + ' ' + (seasonMatches.length === 1 ? 'match' : 'matches') + '</span>' +
+        '<span class="results-summary-arrow" aria-hidden="true">\u25be</span>' +
+        '</summary>' +
+        '<div class="results-collapse-content">' +
+        seasonMatches.map(resultRowHtml).join("") +
+        '</div>' +
+        '</details>');
+    } else {
+      set("season-matches-collapse", "");
+    }
   };
 
   /* ========================================================= PLAYOFFS === */
