@@ -310,6 +310,33 @@
         standingsTable(g) + legend +
         '</section>';
     }).join(""));
+
+    /* --------------------------------- this season's stats & leaders --- */
+    buildSortableStatsTable("season-stats-table", "seasonStatsTable", statsRowsFrom(D.allStats()), "index");
+
+    set("season-stats-help",
+      '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
+      '<p><strong>01 Avg (PPD)</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
+      ' legs, stats from DARTSLIVE result screen. Higher is better.</p>' +
+      '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket.</p>' +
+      '<p><strong>ダーツ Index</strong> \u2014 our single rating combining the two, where 60 PPD in 01 and ' +
+      '2.5 MPR in cricket would score 100.</p>' +
+      '<p class="muted tiny">Tap any column heading to re-sort the table.</p></div>');
+
+    var L = D.leaders();
+    leaderTint = 0;
+    set("season-records-leaders",
+      leaderCard("Best overall index", L.bestOverall, "ダーツ Index") +
+      leaderCard("Best 01 average", L.best01, "01 Avg", "season") +
+      leaderCard("Best cricket average", L.bestCricket, "Cricket Avg", "season") +
+      leaderCard("Most wins", L.mostWins, "matches won") +
+      leaderCard("Best win rate", L.bestWinPct, "%"));
+
+    set("season-records-games",
+      leaderCard("Highest single 01 game", L.high01Game, "PPD",
+        L.high01Game ? "v " + D.playerName(L.high01Game.stats.best01.opponent) : "", "accent") +
+      leaderCard("Highest single cricket game", L.highCricketGame, "MPR",
+        L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
   };
 
   /* ========================================================= PLAYOFFS === */
@@ -488,50 +515,37 @@
   }
 
   D.pages.stats = function () {
-    /* ---------------------------------------- the big sortable table --- */
-    buildSortableStatsTable("stats-table", "statsTable", statsRowsFrom(D.allStats()), "index");
+    /* -------------------------------------------------- career averages --- */
+    var history = D.history || [];
+    var careerRows = statsRowsFrom(D.allCareerStats());
+
+    set("career-intro", history.length
+      ? 'Every league and tournament on record combined — this season plus ' +
+        history.length + ' logged result' + (history.length === 1 ? '' : 's') + ' from before it.'
+      : 'All logged results across every season and tournament combined into overall career averages.');
+
+    /* All-time leader cards */
+    var CL = D.careerLeaders();
+    leaderTint = 0;
+    set("records-alltime",
+      leaderCard("Best overall index — career", CL.bestOverall, "ダーツ Index") +
+      leaderCard("Best 01 average — career", CL.best01, "01 Avg") +
+      leaderCard("Best cricket average — career", CL.bestCricket, "Cricket Avg") +
+      leaderCard("Most career wins", CL.mostWins, "matches won") +
+      leaderCard("Best career win rate", CL.bestWinPct, "%", "Min. 2 played") +
+      leaderCard("All-time high 01 game", CL.high01Game, "PPD",
+        CL.high01Game && CL.high01Game.stats && CL.high01Game.stats.best01 ? "v " + D.playerName(CL.high01Game.stats.best01.opponent) : "", "accent"));
+
+    /* Sortable overall career table */
+    buildSortableStatsTable("stats-table", "careerStatsTable", careerRows, "played");
 
     set("stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
-      '<p><strong>01 Avg (PPD)</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
-      ' legs, stats from DARTSLIVE result screen. Higher is better.</p>' +
-      '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket.</p>' +
-      '<p><strong>ダーツ Index</strong> \u2014 our own single number combining the two, where 60 PPD in 01 and ' +
+      '<p><strong>01 Avg (PPD)</strong> — career points per dart in 01 legs across all games.</p>' +
+      '<p><strong>Cricket Avg (MPR)</strong> — career marks per round in cricket across all games.</p>' +
+      '<p><strong>ダーツ Index</strong> — our single rating combining the two, where 60 PPD in 01 and ' +
       '2.5 MPR in cricket would score 100.</p>' +
-      '<p class="muted tiny">Tap any column heading to re-sort the table.</p></div>');
-
-    /* ------------------------------------------- records and honours --- */
-    var L = D.leaders();
-
-    leaderTint = 0;
-    set("records-season",
-      leaderCard("Best overall index", L.bestOverall, "ダーツ Index") +
-      leaderCard("Best 01 average", L.best01, "01 Avg", "season") +
-      leaderCard("Best cricket average", L.bestCricket, "Cricket Avg", "season") +
-      leaderCard("Most wins", L.mostWins, "matches won") +
-      leaderCard("Best win rate", L.bestWinPct, "%"));
-
-    set("records-games",
-      leaderCard("Highest single 01 game", L.high01Game, "PPD",
-        L.high01Game ? "v " + D.playerName(L.high01Game.stats.best01.opponent) : "", "accent") +
-      leaderCard("Highest single cricket game", L.highCricketGame, "MPR",
-        L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
-
-    /*
-    set("records-fun",
-      '<div class="leader tint-accent-gold">' +
-      '<div class="cat">The \u201cNice One\u201d Award</div>' +
-      '<div class="val accent-gold">' + (L.niceOne ? U.num(L.niceOne.value) : "\u2013") + '</div>' +
-      '<div class="who">' + (L.niceOne ? U.esc(L.niceOne.stats.player.flag + " " + L.niceOne.stats.player.name) : "Nobody yet") + '</div>' +
-      '<div class="sub">Lowest 01 average in the league. Nice one.</div>' +
-      '</div>' +
-      '<div class="leader tint-accent-plum">' +
-      '<div class="cat">Excellent Grouping, Mr Speaker</div>' +
-      '<div class="val accent-plum">' + (L.mrSpeaker ? "+" + U.num(L.mrSpeaker.value) : "\u2013") + '</div>' +
-      '<div class="who">' + (L.mrSpeaker ? U.esc(L.mrSpeaker.stats.player.flag + " " + L.mrSpeaker.stats.player.name) : "Nobody yet") + '</div>' +
-      '<div class="sub">Biggest gap between their best game and their average \u2014 three lovely darts, three terrible numbers.</div>' +
-      '</div>');
-    */
+      '<p class="muted tiny">Tap any column heading to re-sort the table. Looking for this season only? Head over to the <a href="league.html#season-stats">League Table</a> page.</p></div>');
 
     /* Roll of honour from the archive */
     var champs = (D.archive || []).filter(function (a) { return a.champion; });
@@ -549,27 +563,6 @@
           '</tr>';
       }).join("") + '</tbody></table></div>'
       : '<p class="muted">No past competitions recorded yet.</p>');
-
-    /* -------------------------------------------------- career averages --- */
-    var history = D.history || [];
-    var careerRows = statsRowsFrom(D.allCareerStats());
-
-    set("career-intro", history.length
-      ? 'Every league and tournament on record combined \u2014 this season plus ' +
-        history.length + ' logged result' + (history.length === 1 ? '' : 's') + ' from before it. ' +
-        'Add old results to data/history.js (or a History sheet) and these numbers update themselves.'
-      : 'This will combine every season and tournament a player has ever played, the moment old ' +
-        'results go into data/history.js (or a History sheet). Right now it just matches this season, ' +
-        'because nothing has been logged yet.');
-
-    var CL = D.careerLeaders();
-    leaderTint = 0;
-    set("records-alltime",
-      leaderCard("Best overall index \u2014 career", CL.bestOverall, "ダーツ Index") +
-      leaderCard("Best 01 average \u2014 career", CL.best01, "01 Avg") +
-      leaderCard("Best cricket average \u2014 career", CL.bestCricket, "Cricket Avg"));
-
-    buildSortableStatsTable("career-table", "careerTable", careerRows, "played");
   };
 
   /* ========================================================== PLAYERS === */

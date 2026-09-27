@@ -132,10 +132,9 @@
       '      <h4>Quick links</h4>' +
       '      <ul>' +
       '        <li><a href="league.html">League table</a></li>' +
+      '        <li><a href="league.html#season-stats">Season stats &amp; highs</a></li>' +
       '        <li><a href="playoffs.html">Playoff picture</a></li>' +
-      '        <li><a href="stats.html">Everyone\'s averages</a></li>' +
-      '        <li><a href="stats.html#records">Records &amp; honours</a></li>' +
-      '        <li><a href="stats.html#career">Career averages</a></li>' +
+      '        <li><a href="stats.html">Overall career stats</a></li>' +
       '        <li><a href="archive.html">The archive</a></li>' +
       '        <li><a href="submit.html">Submit a result</a></li>' +
       '        <li><a href="join.html">How to join</a></li>' +

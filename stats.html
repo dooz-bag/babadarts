@@ -17,14 +17,26 @@
 
   <section class="section">
     <div class="wrap">
-      <p class="eyebrow">Straight off the DARTSLIVE screen</p>
+      <p class="eyebrow">All-time league records</p>
       <h1>Stats &amp; Records</h1>
-      <p class="hero-sub">Everyone's averages in one sortable table, then the season's
-        leaders, the single-game highs, career averages across every league and tournament,
-        and every champion.</p>
+      <p class="hero-sub" id="career-intro"></p>
     </div>
   </section>
 
+  <!-- ------------------------------------------------ OVERALL LEADERS -->
+  <section class="section" id="records" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">All competitions combined</p>
+          <h2>All-time leaders</h2>
+        </div>
+      </div>
+      <div class="grid grid-3" id="records-alltime" style="margin-bottom:20px"></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------ OVERALL TABLE -->
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <div id="stats-table"></div>
@@ -34,52 +46,6 @@
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <div id="stats-help"></div>
-    </div>
-  </section>
-
-  <!-- ------------------------------------------------ RECORDS / HONOURS -->
-  <section class="section" id="records" style="padding-top:0">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Best of the league</p>
-          <h2>This season's leaders</h2>
-        </div>
-      </div>
-      <div class="grid grid-3" id="records-season"></div>
-    </div>
-  </section>
-
-  <section class="section" style="padding-top:0">
-    <div class="wrap">
-      <h2>Individual game highs</h2>
-      <p class="muted">The best game anyone has produced this season.</p>
-      <div class="grid grid-2" id="records-games"></div>
-    </div>
-  </section>
-
-  <!--
-  <section class="section" style="padding-top:0">
-    <div class="wrap">
-      <h2>The prestigious awards</h2>
-      <p class="muted">Nobody has ever asked to win one of these.</p>
-      <div class="grid grid-2" id="records-fun"></div>
-    </div>
-  </section>
-  -->
-
-  <!-- --------------------------------------------------- CAREER AVERAGES -->
-  <section class="section" id="career" style="padding-top:0">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Every league and tournament combined</p>
-          <h2>Career averages</h2>
-        </div>
-      </div>
-      <p class="muted" id="career-intro"></p>
-      <div class="grid grid-3" id="records-alltime" style="margin-bottom:20px"></div>
-      <div id="career-table"></div>
     </div>
   </section>
 
