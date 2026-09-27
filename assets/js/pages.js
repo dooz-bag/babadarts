@@ -115,6 +115,29 @@
       '</div>';
   }
 
+  /* Same idea as leaderCard() above, but wrapped in a soft diffused neon
+     glow that picks up the tint colour — used for the "Best of the season"
+     boxes on an archive page, where the headline stats deserve to stand out
+     a bit more than a normal stat card. `kind` controls how the value is
+     formatted: "num" (2dp average), "int" (whole number) or "pct" (1dp %). */
+  function seasonLeaderCard(category, leader, tint, kind, sub) {
+    if (!leader) {
+      return '<div class="leader neon tint-' + tint + '" style="--glow:var(--' + tint + ')">' +
+        '<div class="cat">' + U.esc(category) + '</div>' +
+        '<div class="val muted">\u2013</div><div class="sub">No results yet</div></div>';
+    }
+    var p = leader.stats.player;
+    var val = kind === "pct" ? U.num(leader.value, 1) + "%"
+      : kind === "int" ? String(Math.round(leader.value))
+      : U.num(leader.value);
+    return '<div class="leader neon tint-' + tint + '" style="--glow:var(--' + tint + ')">' +
+      '<div class="cat">' + U.esc(category) + '</div>' +
+      '<div class="val ' + tint + '">' + val + '</div>' +
+      '<div class="who">' + U.esc(p.flag ? p.flag + " " : "") + U.esc(p.name) + '</div>' +
+      '<div class="sub">' + U.esc(sub || "") + '</div>' +
+      '</div>';
+  }
+
   // "Group A", "Group B" ... plus how many are in it
   function groupHeading(group, i, extra) {
     return '<h2 class="' + groupAccent(i) + '">Group ' + U.esc(group) +
@@ -706,25 +729,25 @@
         '</div></div></div>';
     }
 
-    // Highlights: manual from archive.js or auto-calculated from logged matches
+    // Highlights: manual from archive.js, or a set of neon "best of the
+    // season" boxes worked out automatically from the logged results.
     var highlights = (a.highlights && a.highlights.length) ? a.highlights : [];
-    if (!highlights.length && autoMatches.length) {
-      var allSeasonStats = D.archiveStats(a.id, true);
-      var L = D.leadersFrom(allSeasonStats);
-      highlights = [
-        L.best01 ? { label: "Best 01 PPD", value: U.esc(L.best01.stats.player.name) + " — " + U.num(L.best01.value) } : null,
-        L.bestCricket ? { label: "Best Cricket MPR", value: U.esc(L.bestCricket.stats.player.name) + " — " + U.num(L.bestCricket.value) } : null,
-        L.high01Game ? { label: "Highest 01 Game", value: U.num(L.high01Game.value) + (L.high01Game.stats ? " (" + U.esc(L.high01Game.stats.player.name) + ")" : "") } : null,
-        L.highCricketGame ? { label: "Highest Cricket Game", value: U.num(L.highCricketGame.value) + (L.highCricketGame.stats ? " (" + U.esc(L.highCricketGame.stats.player.name) + ")" : "") } : null,
-        L.mostWins ? { label: "Most Wins", value: U.esc(L.mostWins.stats.player.name) + " (" + L.mostWins.value + ")" } : null
-      ].filter(Boolean);
-    }
-
     if (highlights.length) {
       html += '<div class="section"><h2>Highlights</h2><div class="grid grid-3">' +
         highlights.map(function (h) {
           return '<div class="card"><p class="eyebrow">' + U.esc(h.label) + '</p><p><strong>' + U.esc(h.value) + '</strong></p></div>';
         }).join("") + '</div></div>';
+    } else if (autoMatches.length) {
+      var allSeasonStats = D.archiveStats(a.id, true);
+      var L = D.leadersFrom(allSeasonStats);
+      html += '<div class="section"><h2>Best of the season</h2><div class="grid grid-3">' +
+        seasonLeaderCard("Best 01 Average", L.best01, "accent", "num", "Season average") +
+        seasonLeaderCard("Best Cricket Average", L.bestCricket, "accent-cool", "num", "Season average") +
+        seasonLeaderCard("Highest 01 Game", L.high01Game, "accent-warm", "num", "Best single leg") +
+        seasonLeaderCard("Highest Cricket Game", L.highCricketGame, "accent-good", "num", "Best single leg") +
+        seasonLeaderCard("Most Wins", L.mostWins, "accent-gold", "int", "Matches won") +
+        seasonLeaderCard("Highest Win %", L.bestWinPct, "accent-plum", "pct", "Min. 2 matches played") +
+        '</div></div>';
     }
 
     if (a.results && a.results.length) {
@@ -735,13 +758,16 @@
       html += '</div>';
     }
 
-    // League table from regular season results
+    // League table from regular season results. Grouping is worked out from
+    // the group column on the History tab's own rows (see D.archiveStats),
+    // never from a player's current, live-season group in data/players.js --
+    // which may well have changed by the time this page gets read.
     if (autoStats.length) {
       var groupsSeen = {};
       var groupsList = [];
       autoStats.forEach(function (s) {
-        var g = s.player.group;
-        if (g && g !== "?" && !groupsSeen[g]) { groupsSeen[g] = true; groupsList.push(g); }
+        var g = s.group;
+        if (g && !groupsSeen[g]) { groupsSeen[g] = true; groupsList.push(g); }
       });
       groupsList.sort();
 
@@ -749,18 +775,26 @@
         return '<div class="section">' +
           (title ? '<h3 style="margin-bottom:12px">' + U.esc(title) + '</h3>' : '') +
           '<div class="table-wrap"><table class="data">' +
-          '<thead><tr><th>#</th><th>Player</th><th>Grp</th><th class="num">P</th><th class="num">W</th><th class="num">L</th>' +
-          '<th class="num">Pts</th><th class="num">PPD</th><th class="num">MPR</th><th class="num">ダーツ Index</th></tr></thead><tbody>' +
+          '<thead><tr><th>#</th><th>Player</th>' +
+          '<th class="num" title="Played">P</th><th class="num" title="Won">W</th><th class="num" title="Lost">L</th>' +
+          '<th class="num" title="Legs won">LF</th><th class="num" title="Legs lost">LA</th>' +
+          '<th class="num" title="01 average, points per dart">01 Avg</th>' +
+          '<th class="num" title="Best single-game 01 average">Best 01</th>' +
+          '<th class="num" title="Cricket average, marks per round">Cricket Avg</th>' +
+          '<th class="num" title="Best single-game cricket average">Best Cricket</th>' +
+          '<th class="num" title="ダーツ Index — combined 01 + cricket rating">Index</th></tr></thead><tbody>' +
           rows.map(function (s, i) {
             return '<tr><td><span class="pos">' + (i + 1) + '</span></td>' +
               '<td>' + playerCellHtml(s.player) + '</td>' +
-              '<td class="muted">' + U.esc(s.player.group || "\u2013") + '</td>' +
               '<td class="num">' + s.played + '</td>' +
               '<td class="num">' + s.won + '</td>' +
               '<td class="num">' + s.lost + '</td>' +
-              '<td class="num"><strong>' + s.points + '</strong></td>' +
+              '<td class="num">' + s.legsFor + '</td>' +
+              '<td class="num">' + s.legsAgainst + '</td>' +
               '<td class="num">' + U.num(s.ppd) + '</td>' +
+              '<td class="num">' + U.num(s.best01 ? s.best01.value : null) + '</td>' +
               '<td class="num">' + U.num(s.mpr) + '</td>' +
+              '<td class="num">' + U.num(s.bestCricket ? s.bestCricket.value : null) + '</td>' +
               '<td class="num">' + U.num(s.index, 1) + '</td></tr>';
           }).join("") + '</tbody></table></div></div>';
       }
@@ -768,7 +802,7 @@
       html += '<div class="section"><h2>Regular season standings</h2>';
       if (groupsList.length > 1) {
         groupsList.forEach(function (g) {
-          var gRows = autoStats.filter(function (s) { return s.player.group === g; });
+          var gRows = autoStats.filter(function (s) { return s.group === g; });
           html += renderArchiveTable(gRows, "Group " + g);
         });
       } else {
@@ -777,15 +811,13 @@
       html += '</div>';
     } else if (a.finalTable && a.finalTable.length) {
       html += '<div class="section"><h2>Final table</h2><div class="table-wrap"><table class="data">' +
-        '<thead><tr><th>#</th><th>Player</th><th>Grp</th><th class="num">W</th><th class="num">L</th>' +
-        '<th class="num">Pts</th><th class="num">PPD</th><th class="num">MPR</th></tr></thead><tbody>' +
+        '<thead><tr><th>#</th><th>Player</th><th class="num">W</th><th class="num">L</th>' +
+        '<th class="num">01 Avg</th><th class="num">Cricket Avg</th></tr></thead><tbody>' +
         a.finalTable.map(function (r) {
           return '<tr><td><span class="pos">' + U.esc(r.pos) + '</span></td>' +
             '<td>' + U.esc(r.player) + '</td>' +
-            '<td class="muted">' + U.esc(r.group || "\u2013") + '</td>' +
             '<td class="num">' + U.esc(r.w) + '</td>' +
             '<td class="num">' + U.esc(r.l) + '</td>' +
-            '<td class="num"><strong>' + U.esc(r.pts) + '</strong></td>' +
             '<td class="num">' + U.num(r.ppd) + '</td>' +
             '<td class="num">' + U.num(r.mpr) + '</td></tr>';
         }).join("") + '</tbody></table></div></div>';

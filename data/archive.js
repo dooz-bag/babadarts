@@ -24,7 +24,7 @@ DATSU.archive = [
     venue: "HUB高田馬場店",
     champion: "",
     runnerUp: "",
-    blurb: "Results, standings and playoff bracket from the 2026 Spring League.",
+    blurb: "Running from March to May 2026. The first timer Brady goes undefeated in the group stage only to lose to the powerhouse of Ken in the finals.",
     highlights: [],
     finalTable: [],
     results: [],

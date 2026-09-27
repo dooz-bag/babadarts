@@ -369,6 +369,28 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
 .leader.tint-accent-gold { border-left: 3px solid var(--accent-gold); }
 .leader.tint-accent-plum { border-left: 3px solid var(--accent-plum); }
 
+/* A little extra flair for a leader card, used for the archive page's
+   "best of the season" boxes -- a soft, diffused neon glow around the
+   edge, in whatever colour --glow is set to inline. Falls back to the
+   plain red accent if --glow isn't set, so it never breaks silently. */
+.leader.neon {
+  position: relative;
+  border-left-color: var(--glow, var(--accent));
+  background: linear-gradient(165deg, var(--panel-2), var(--panel) 60%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 16px -4px var(--glow, var(--accent)),
+    0 0 40px -8px var(--glow, var(--accent));
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.leader.neon:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 22px -2px var(--glow, var(--accent)),
+    0 0 56px -6px var(--glow, var(--accent));
+}
+
 /* ------------------------------------------------------------- AVATARS --- */
 .avatar {
   width: 38px; height: 38px; flex: none;

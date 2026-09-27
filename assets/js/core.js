@@ -575,9 +575,33 @@
     var matches = (!includePlayoffs && regular.length) ? regular : all;
     var ids = {};
     matches.forEach(function (m) { ids[m.a] = true; ids[m.b] = true; });
+
+    // Which group a player was actually in FOR THIS competition. A player's
+    // group can be different from season to season (or from their current,
+    // live-season group in data/players.js), so this is worked out purely
+    // from the group column on their own rows in the History tab — whichever
+    // group they show up against most often for this competition wins.
+    var groupVotes = {};
+    all.forEach(function (m) {
+      var g = String(m.group || "").trim().toUpperCase();
+      if (!g) return;
+      [m.a, m.b].forEach(function (pid) {
+        groupVotes[pid] = groupVotes[pid] || {};
+        groupVotes[pid][g] = (groupVotes[pid][g] || 0) + 1;
+      });
+    });
+    function groupFor(pid) {
+      var votes = groupVotes[pid], best = "", bestCount = 0;
+      Object.keys(votes || {}).sort().forEach(function (g) {
+        if (votes[g] > bestCount) { best = g; bestCount = votes[g]; }
+      });
+      return best;
+    }
+
     var stats = Object.keys(ids).map(function (id) {
       var s = computeStats(id, matches);
       s.player = D.player(id);
+      s.group = groupFor(id);
       return s;
     });
     stats.sort(function (x, y) {
@@ -596,6 +620,40 @@
     var quarters = playoffMatches.filter(function (m) { return m.round === "quarter"; });
     var semis = playoffMatches.filter(function (m) { return m.round === "semi"; });
     var finals = playoffMatches.filter(function (m) { return m.round === "final"; });
+
+    // The History tab is just a flat list of results, usually in whatever
+    // order they were actually played — it has no idea which quarter-final
+    // feeds which semi, or which semi feeds the final. Drawn straight off
+    // that order, a bracket can end up showing (say) QF-1's winner meeting
+    // QF-3's winner in the semis, when the real bracket had them meeting
+    // QF-2's winner. Fix: walk backwards from the final. For each match one
+    // round up, pull its two competitors' own matches out of the previous
+    // round and sit them side by side — that reconstructs the true bracket
+    // shape no matter what order the results were entered in.
+    function reorderToMatch(nextRound, prevRound) {
+      if (!nextRound.length || !prevRound.length) return prevRound;
+      var used = {};
+      function take(pid) {
+        for (var i = 0; i < prevRound.length; i++) {
+          if (used[i]) continue;
+          if (prevRound[i].a === pid || prevRound[i].b === pid) { used[i] = true; return prevRound[i]; }
+        }
+        return null;
+      }
+      var ordered = [];
+      nextRound.forEach(function (m) {
+        var first = take(m.a), second = take(m.b);
+        if (first) ordered.push(first);
+        if (second) ordered.push(second);
+      });
+      // Anything left over (e.g. this round isn't finished yet) is tacked
+      // on at the end in its original order rather than silently dropped.
+      prevRound.forEach(function (m, i) { if (!used[i]) ordered.push(m); });
+      return ordered;
+    }
+
+    if (finals.length) semis = reorderToMatch(finals, semis);
+    if (semis.length) quarters = reorderToMatch(semis, quarters);
 
     var champ = null, runnerUp = null;
     if (finals.length) {
