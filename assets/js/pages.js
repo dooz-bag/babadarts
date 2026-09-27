@@ -573,43 +573,68 @@
   /* ========================================================== PLAYERS === */
 
   D.pages.players = function () {
-    var groups = D.groups();
-    var active = D.activePlayers();
+    // Collect everyone who has ever played or is registered in D.players
+    var seen = {};
+    var allPlayers = [];
+
+    (D.players || []).forEach(function (p) {
+      if (p.id && !seen[p.id]) {
+        seen[p.id] = true;
+        allPlayers.push(p);
+      }
+    });
+
+    // Also include any player id appearing in matches/history who might not be in players.js
+    (D.allMatchesEver ? D.allMatchesEver() : []).forEach(function (m) {
+      [m.a, m.b].forEach(function (id) {
+        if (id && !seen[id]) {
+          seen[id] = true;
+          allPlayers.push(D.player(id));
+        }
+      });
+    });
+
+    // Sort alphabetically by name
+    allPlayers.sort(function (a, b) {
+      return (a.name || a.id).localeCompare(b.name || b.id);
+    });
+
     var countries = {};
-    active.forEach(function (p) { if (p.country) countries[p.country] = 1; });
+    allPlayers.forEach(function (p) { if (p.country) countries[p.country] = 1; });
+    var countryCount = Object.keys(countries).length;
 
     set("players-intro",
-      'All ' + active.length + ' of us, from ' + Object.keys(countries).length +
-      ' countries, split into ' + groups.length + ' group' + (groups.length === 1 ? '' : 's') +
-      '. Averages update automatically as results come in.');
+      'All ' + allPlayers.length + ' players who have ever graced the league' +
+      (countryCount ? ', hailing from ' + countryCount + ' ' + (countryCount === 1 ? 'country' : 'countries') : '') +
+      '. Career averages combine this season and all past competitions.');
 
-    set("player-groups", groups.map(function (g, i) {
-      var rows = D.standings(g);
-      return '<section class="section" style="padding-top:0">' +
-        groupHeading(g, i) +
-        '<div class="grid grid-3">' +
-        rows.map(function (r) {
-          var p = r.player, s = r.stats;
-          return '<div class="card">' +
-            '<div class="player-card">' + D.avatarHtml(p, true) +
-            '<div class="meta">' +
-            '<div class="nm">' + U.esc(p.name) + '</div>' +
-            '<div class="dl">' + U.esc(p.dartslive) + '</div>' +
-            '<div class="muted tiny">' + U.esc(p.flag) + ' ' + U.esc(p.country) + ' \u00b7 Group ' + U.esc(p.group) + '</div>' +
-            '</div></div>' +
-            '<div class="chips">' +
-            '<span class="chip">Record <strong>' + s.won + '\u2013' + s.lost + '</strong></span>' +
-            '<span class="chip">PPD <strong>' + U.num(s.ppd) + '</strong></span>' +
-            '<span class="chip">MPR <strong>' + U.num(s.mpr) + '</strong></span>' +
-            '<span class="chip">Index <strong>' + U.num(s.index, 1) + '</strong></span>' +
-            '</div>' +
-            (p.notes && p.notes.length
-              ? '<ul class="notes">' + p.notes.map(function (n) { return '<li>' + U.esc(n) + '</li>'; }).join("") + '</ul>'
-              : '') +
-            '</div>';
-        }).join("") +
-        '</div></section>';
-    }).join(""));
+    var cardsHtml = allPlayers.map(function (p) {
+      var s = D.careerStatsFor(p.id);
+      var countryLine = [p.flag, p.country].filter(Boolean).join(" ");
+
+      return '<div class="card">' +
+        '<div class="player-card">' + D.avatarHtml(p, true) +
+        '<div class="meta">' +
+        '<div class="nm">' + U.esc(p.name) + '</div>' +
+        (p.dartslive ? '<div class="dl">' + U.esc(p.dartslive) + '</div>' : '') +
+        (countryLine ? '<div class="muted tiny">' + U.esc(countryLine) + '</div>' : '') +
+        '</div></div>' +
+        '<div class="chips">' +
+        '<span class="chip">Record <strong>' + s.won + '\u2013' + s.lost + '</strong></span>' +
+        '<span class="chip">01 Avg <strong>' + U.num(s.ppd) + '</strong></span>' +
+        '<span class="chip">Cricket Avg <strong>' + U.num(s.mpr) + '</strong></span>' +
+        '<span class="chip">ダーツ Index <strong>' + U.num(s.index, 1) + '</strong></span>' +
+        '</div>' +
+        (p.notes && p.notes.length
+          ? '<ul class="notes">' + p.notes.map(function (n) { return '<li>' + U.esc(n) + '</li>'; }).join("") + '</ul>'
+          : '') +
+        '</div>';
+    }).join("");
+
+    set("player-grid-section",
+      '<section class="section" style="padding-top:0">' +
+      '<div class="grid grid-3">' + cardsHtml + '</div>' +
+      '</section>');
   };
 
   /* ========================================================== ARCHIVE === */
