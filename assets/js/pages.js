@@ -827,16 +827,29 @@
       var regMatches = autoMatches.filter(function (m) { return !m.round; });
       var poMatches = autoMatches.filter(function (m) { return !!m.round; });
 
+      var resultsBody = "";
       if (poMatches.length) {
-        html += '<div class="section"><h2>Playoff match results</h2>' +
-          poMatches.map(resultRowHtml).join("") +
-          '</div>';
+        resultsBody += '<h3 style="margin:20px 0 12px">Playoff match results</h3>' +
+          poMatches.map(resultRowHtml).join("");
       }
       if (regMatches.length) {
-        html += '<div class="section"><h2>' + (poMatches.length ? "Regular season match results" : "Match results") + '</h2>' +
-          regMatches.map(resultRowHtml).join("") +
-          '</div>';
+        resultsBody += '<h3 style="margin:20px 0 12px">' +
+          (poMatches.length ? "Regular season match results" : "Match results") + '</h3>' +
+          regMatches.map(resultRowHtml).join("");
       }
+
+      html += '<div class="section">' +
+        '<details class="results-collapse">' +
+        '<summary class="results-summary">' +
+        '<span class="results-summary-title">Individual match results</span>' +
+        '<span class="results-summary-count">' + autoMatches.length + ' matches</span>' +
+        '<span class="results-summary-arrow" aria-hidden="true">▾</span>' +
+        '</summary>' +
+        '<div class="results-collapse-content">' +
+        resultsBody +
+        '</div>' +
+        '</details>' +
+        '</div>';
     }
 
     if (a.photos && a.photos.length) {

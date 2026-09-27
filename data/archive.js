@@ -31,13 +31,13 @@ DATSU.archive = [
     photos: [
       { src: "spring-26-poster.JPG", caption: "The big match, two players remain." },
       { src: "spring-26-firstgame.JPG", caption: "Eagerly watching the first match of the season." },
-      { src: "spring-26-group.JPG", caption: "We are all athletes." },
-      { src: "spring-26-daviddartinwall.JPG", caption: "Piercing a wall with a soft tip dart is a feat worth celebrating." },
+      { src: "spring-26-group.JPG", caption: "A real group of athletes." },
+      { src: "spring-26-daviddartinwall.JPG", caption: "Piercing a wall with a soft tip dart is an impressive feat." },
       { src: "spring-26-martin.JPG", caption: "He has the same look on Christmas morning." },
       { src: "spring-26-martinwrestle.JPG", caption: "Martin taking his losses lying down." },
       { src: "spring-26-waiting.JPG", caption: "Checking our watches, waiting for some matches." },
       { src: "spring-26-prechamp.JPG", caption: "Before the championship, the calm before the storm." },
-      { src: "spring-26-groupchamp.JPG", caption: "Most of the group celebrating another successful season." },
+      { src: "spring-26-groupchamp.JPG", caption: "Celebrating another successful season." },
       { src: "spring-26-postchamp.JPG", caption: "Ken rightfully earning his name on the trophy." }
     ]
   }

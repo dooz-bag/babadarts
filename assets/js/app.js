@@ -57,8 +57,10 @@
       '<code>' + escSrc + '</code>' +
       '</div>';
     return '<figure class="shot">' +
+      '<button type="button" class="shot-btn" data-src="' + escSrc + '" data-cap="' + cap + '" aria-label="View larger image">' +
       '<img src="' + escSrc + '" alt="' + cap + '" loading="lazy" ' +
-      'onerror="this.outerHTML=' + JSON.stringify(fallback).replace(/"/g, "&quot;") + '">' +
+      'onerror="this.closest(\'.shot\').outerHTML=' + JSON.stringify(fallback).replace(/"/g, "&quot;") + '">' +
+      '</button>' +
       (cap ? '<figcaption>' + cap + '</figcaption>' : '') +
       '</figure>';
   };
@@ -145,6 +147,62 @@
       '</div>';
   }
 
+  /* ----------------------------------------------------------- lightbox --- */
+
+  function wireLightbox() {
+    var modal = document.getElementById("datsu-lightbox");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "datsu-lightbox";
+      modal.className = "lightbox";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-modal", "true");
+      modal.setAttribute("aria-hidden", "true");
+      modal.innerHTML =
+        '<div class="lightbox-backdrop"></div>' +
+        '<div class="lightbox-dialog">' +
+        '  <button type="button" class="lightbox-close" aria-label="Close image">&times;</button>' +
+        '  <div class="lightbox-img-wrap">' +
+        '    <img class="lightbox-img" src="" alt="">' +
+        '  </div>' +
+        '  <p class="lightbox-cap"></p>' +
+        '</div>';
+      document.body.appendChild(modal);
+
+      function close() {
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("lightbox-locked");
+      }
+
+      modal.addEventListener("click", function (e) {
+        if (e.target.closest(".lightbox-close") || e.target.classList.contains("lightbox-backdrop")) {
+          close();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && modal.classList.contains("open")) close();
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".shot-btn");
+      if (!btn) return;
+      var src = btn.getAttribute("data-src");
+      var cap = btn.getAttribute("data-cap") || "";
+      var imgEl = modal.querySelector(".lightbox-img");
+      var capEl = modal.querySelector(".lightbox-cap");
+      imgEl.src = src;
+      imgEl.alt = cap;
+      capEl.textContent = cap;
+      capEl.style.display = cap ? "block" : "none";
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("lightbox-locked");
+    });
+  }
+
   /* --------------------------------------------------------------- boot --- */
 
   function wireNav() {
@@ -164,6 +222,7 @@
     if (header) header.innerHTML = buildHeader(page);
     if (footer) footer.innerHTML = buildFooter();
     wireNav();
+    wireLightbox();
 
     document.title = (document.body.getAttribute("data-title") || "") +
       " · " + D.config.leagueShortName;
