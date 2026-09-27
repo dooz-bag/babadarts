@@ -105,7 +105,7 @@ DATSU.config = {
     enabled: true,
     playersCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=0&single=true&output=csv",
     matchesCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=958369008&single=true&output=csv",
-    historyCsvUrl: ""
+    historyCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=1630828027&single=true&output=csv"
   },
 
   /* ---- SUBMIT A RESULT (optional — see docs/SUBMIT-RESULTS.md) --------
