@@ -81,9 +81,10 @@
     var legs = (m.legs || []).map(function (leg) {
       var isCricket = String(leg.game).toLowerCase() === "cricket";
       var unit = isCricket ? "MPR" : "PPD";
-      var label = isCricket ? "Cricket" : U.esc(D.config.rules.game1);
-      return '<span class="leg-pill">' + label + ' \u2192 ' + U.esc(D.player(leg.winner).name) +
-        ' <span class="muted">(' + U.num(leg.aStat) + " / " + U.num(leg.bStat) + ' ' + unit + ')</span></span>';
+      var label = isCricket ? "Cricket" : (leg.game && leg.game !== "leg" ? U.esc(leg.game) : U.esc(D.config.rules.game1));
+      var hasStats = (typeof leg.aStat === "number" && !isNaN(leg.aStat)) || (typeof leg.bStat === "number" && !isNaN(leg.bStat));
+      var statsSpan = hasStats ? ' <span class="muted">(' + U.num(leg.aStat) + " / " + U.num(leg.bStat) + ' ' + unit + ')</span>' : '';
+      return '<span class="leg-pill">' + label + ' \u2192 ' + U.esc(D.player(leg.winner).name) + statsSpan + '</span>';
     }).join("");
 
     return '<div class="result-row">' +
@@ -627,6 +628,13 @@
     document.body.setAttribute("data-title", a.name);
     document.title = a.name + " \u00b7 " + D.config.leagueShortName;
 
+    var autoMatches = D.archiveMatches(a.id);
+    var playoffs = D.archivePlayoffs(a.id);
+    var autoStats = D.archiveStats(a.id); // regular season matches only (where !m.round)
+
+    var champName = a.champion || (playoffs.champion ? (playoffs.champion.flag ? playoffs.champion.flag + " " : "") + playoffs.champion.name : "TBC");
+    var runnerUpName = a.runnerUp || (playoffs.runnerUp ? (playoffs.runnerUp.flag ? playoffs.runnerUp.flag + " " : "") + playoffs.runnerUp.name : "");
+
     var html = "";
 
     html += '<p class="eyebrow">' + U.esc(a.type === "tournament" ? "Tournament" : "League") + ' \u00b7 ' + U.esc(a.dates) + '</p>';
@@ -634,14 +642,87 @@
     if (a.blurb) html += '<p class="hero-sub">' + U.esc(a.blurb) + '</p>';
 
     html += '<div class="chips">' +
-      '<span class="chip">Champion <strong class="accent-good">' + U.esc(a.champion || "TBC") + '</strong></span>' +
-      (a.runnerUp ? '<span class="chip">Runner-up <strong>' + U.esc(a.runnerUp) + '</strong></span>' : '') +
+      '<span class="chip">Champion <strong class="accent-good">' + U.esc(champName) + '</strong></span>' +
+      (runnerUpName ? '<span class="chip">Runner-up <strong>' + U.esc(runnerUpName) + '</strong></span>' : '') +
       (a.venue ? '<span class="chip">' + U.esc(a.venue) + '</span>' : '') +
       '</div>';
 
-    if (a.highlights && a.highlights.length) {
+    // Playoff knockout bracket
+    var poRounds = [];
+    if (playoffs.quarters.length) {
+      poRounds.push({
+        name: "Quarter-finals",
+        ties: playoffs.quarters.map(function (m, i) {
+          var s = D.legScore(m);
+          var pa = D.player(m.a), pb = D.player(m.b);
+          return {
+            id: "QF-" + (i + 1),
+            home: { name: pa.name, flag: pa.flag, score: s.a, won: s.a > s.b },
+            away: { name: pb.name, flag: pb.flag, score: s.b, won: s.b > s.a }
+          };
+        })
+      });
+    }
+    if (playoffs.semis.length) {
+      poRounds.push({
+        name: "Semi-finals",
+        ties: playoffs.semis.map(function (m, i) {
+          var s = D.legScore(m);
+          var pa = D.player(m.a), pb = D.player(m.b);
+          return {
+            id: "SF-" + (i + 1),
+            home: { name: pa.name, flag: pa.flag, score: s.a, won: s.a > s.b },
+            away: { name: pb.name, flag: pb.flag, score: s.b, won: s.b > s.a }
+          };
+        })
+      });
+    }
+    if (playoffs.finals.length) {
+      poRounds.push({
+        name: "Final",
+        ties: playoffs.finals.map(function (m, i) {
+          var s = D.legScore(m);
+          var pa = D.player(m.a), pb = D.player(m.b);
+          return {
+            id: "Final",
+            home: { name: pa.name, flag: pa.flag, score: s.a, won: s.a > s.b },
+            away: { name: pb.name, flag: pb.flag, score: s.b, won: s.b > s.a }
+          };
+        })
+      });
+    }
+
+    if (poRounds.length) {
+      var maxCells = Math.max.apply(null, poRounds.map(function (r) { return r.ties.length; }));
+      html += '<div class="section"><h2>Playoff bracket</h2>' +
+        '<div class="bracket-scroll">' +
+        '<div class="bracket" style="--cells:' + maxCells + '">' +
+        poRounds.map(function (r) {
+          return '<div class="bracket-round">' +
+            '<h4 class="bracket-round-title">' + U.esc(r.name) + '</h4>' +
+            '<div class="bracket-cells">' + r.ties.map(bracketCellHtml).join("") + '</div>' +
+            '</div>';
+        }).join("") +
+        '</div></div></div>';
+    }
+
+    // Highlights: manual from archive.js or auto-calculated from logged matches
+    var highlights = (a.highlights && a.highlights.length) ? a.highlights : [];
+    if (!highlights.length && autoMatches.length) {
+      var allSeasonStats = D.archiveStats(a.id, true);
+      var L = D.leadersFrom(allSeasonStats);
+      highlights = [
+        L.best01 ? { label: "Best 01 PPD", value: U.esc(L.best01.stats.player.name) + " — " + U.num(L.best01.value) } : null,
+        L.bestCricket ? { label: "Best Cricket MPR", value: U.esc(L.bestCricket.stats.player.name) + " — " + U.num(L.bestCricket.value) } : null,
+        L.high01Game ? { label: "Highest 01 Game", value: U.num(L.high01Game.value) + (L.high01Game.stats ? " (" + U.esc(L.high01Game.stats.player.name) + ")" : "") } : null,
+        L.highCricketGame ? { label: "Highest Cricket Game", value: U.num(L.highCricketGame.value) + (L.highCricketGame.stats ? " (" + U.esc(L.highCricketGame.stats.player.name) + ")" : "") } : null,
+        L.mostWins ? { label: "Most Wins", value: U.esc(L.mostWins.stats.player.name) + " (" + L.mostWins.value + ")" } : null
+      ].filter(Boolean);
+    }
+
+    if (highlights.length) {
       html += '<div class="section"><h2>Highlights</h2><div class="grid grid-3">' +
-        a.highlights.map(function (h) {
+        highlights.map(function (h) {
           return '<div class="card"><p class="eyebrow">' + U.esc(h.label) + '</p><p><strong>' + U.esc(h.value) + '</strong></p></div>';
         }).join("") + '</div></div>';
     }
@@ -654,7 +735,47 @@
       html += '</div>';
     }
 
-    if (a.finalTable && a.finalTable.length) {
+    // League table from regular season results
+    if (autoStats.length) {
+      var groupsSeen = {};
+      var groupsList = [];
+      autoStats.forEach(function (s) {
+        var g = s.player.group;
+        if (g && g !== "?" && !groupsSeen[g]) { groupsSeen[g] = true; groupsList.push(g); }
+      });
+      groupsList.sort();
+
+      function renderArchiveTable(rows, title) {
+        return '<div class="section">' +
+          (title ? '<h3 style="margin-bottom:12px">' + U.esc(title) + '</h3>' : '') +
+          '<div class="table-wrap"><table class="data">' +
+          '<thead><tr><th>#</th><th>Player</th><th>Grp</th><th class="num">P</th><th class="num">W</th><th class="num">L</th>' +
+          '<th class="num">Pts</th><th class="num">PPD</th><th class="num">MPR</th><th class="num">ダーツ Index</th></tr></thead><tbody>' +
+          rows.map(function (s, i) {
+            return '<tr><td><span class="pos">' + (i + 1) + '</span></td>' +
+              '<td>' + playerCellHtml(s.player) + '</td>' +
+              '<td class="muted">' + U.esc(s.player.group || "\u2013") + '</td>' +
+              '<td class="num">' + s.played + '</td>' +
+              '<td class="num">' + s.won + '</td>' +
+              '<td class="num">' + s.lost + '</td>' +
+              '<td class="num"><strong>' + s.points + '</strong></td>' +
+              '<td class="num">' + U.num(s.ppd) + '</td>' +
+              '<td class="num">' + U.num(s.mpr) + '</td>' +
+              '<td class="num">' + U.num(s.index, 1) + '</td></tr>';
+          }).join("") + '</tbody></table></div></div>';
+      }
+
+      html += '<div class="section"><h2>Regular season standings</h2>';
+      if (groupsList.length > 1) {
+        groupsList.forEach(function (g) {
+          var gRows = autoStats.filter(function (s) { return s.player.group === g; });
+          html += renderArchiveTable(gRows, "Group " + g);
+        });
+      } else {
+        html += renderArchiveTable(autoStats);
+      }
+      html += '</div>';
+    } else if (a.finalTable && a.finalTable.length) {
       html += '<div class="section"><h2>Final table</h2><div class="table-wrap"><table class="data">' +
         '<thead><tr><th>#</th><th>Player</th><th>Grp</th><th class="num">W</th><th class="num">L</th>' +
         '<th class="num">Pts</th><th class="num">PPD</th><th class="num">MPR</th></tr></thead><tbody>' +
@@ -668,6 +789,22 @@
             '<td class="num">' + U.num(r.ppd) + '</td>' +
             '<td class="num">' + U.num(r.mpr) + '</td></tr>';
         }).join("") + '</tbody></table></div></div>';
+    }
+
+    if (autoMatches.length) {
+      var regMatches = autoMatches.filter(function (m) { return !m.round; });
+      var poMatches = autoMatches.filter(function (m) { return !!m.round; });
+
+      if (poMatches.length) {
+        html += '<div class="section"><h2>Playoff match results</h2>' +
+          poMatches.map(resultRowHtml).join("") +
+          '</div>';
+      }
+      if (regMatches.length) {
+        html += '<div class="section"><h2>' + (poMatches.length ? "Regular season match results" : "Match results") + '</h2>' +
+          regMatches.map(resultRowHtml).join("") +
+          '</div>';
+      }
     }
 
     if (a.photos && a.photos.length) {

@@ -91,7 +91,7 @@ sheet: {
 
 Save, refresh the site. That's it — the league now runs off your sheet.
 
-## Optional: a third tab, `History`, for Career averages
+## Optional: a third tab, `History`, for Career averages & Archive auto-stats
 
 The Stats page has a **Career averages** section that combines this season's
 results with every past league and tournament, so it can work out one
@@ -99,26 +99,42 @@ lifetime PPD/MPR per player instead of just this season's. It reads that
 old data from `data/history.js` by default — see that file for instructions.
 
 If you'd rather keep it in the same sheet as everything else, add a third tab
-called `History` with **exactly the same sixteen columns as the `Matches`
-tab** (date, group, playerA, playerB, then the three legs). A ready-made
-example is in [`data/history-example.csv`](../data/history-example.csv) —
+called `History`. Row 1 headers can be:
+
+| competition | date | group | playerA | playerB | g1game | g1winner | g1a | g1b | g2game | g2winner | g2a | g2b | g3game | g3winner | g3a | g3b | g4game | g4winner | g4a | g4b | g5game | g5winner | g5a | g5b | round |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-spring | 2026-03-02 | A | alex | yuki | 701 | alex | 23.8 | 21.0 | cricket | yuki | 2.10 | 2.35 | 701 | yuki | 21.5 | 22.9 | | | | | | | | | |
+| 2026-spring | 2026-04-17 | | alex | yuki | 701 | yuki | 24.0 | 26.0 | cricket | alex | 2.30 | 2.10 | 701 | yuki | 22.0 | 24.0 | cricket | yuki | 2.20 | 2.50 | | | | | final |
+
+A ready-made example is in [`data/history-example.csv`](../data/history-example.csv) —
 open it, copy the rows into the `History` tab, then overwrite them with your
 real old results.
 
-A couple of things that only apply to this tab:
+A couple of things that apply to this tab:
 
-- `group` can be left **blank** for anything that wasn't a group-league
-  match (e.g. a knockout tournament final). Career totals don't use it —
-  it only matters for this season's group tables.
+- **`competition` (optional)**: Set this to the competition ID matching an entry
+  in `data/archive.js` (e.g. `2026-spring`). When tagged:
+  - The competition's page in the **Archive** (`season.html?s=2026-spring`)
+    will **automatically calculate and display the final standings table**,
+    points, averages, highlights, and match results directly from these rows!
+  - If left blank, the row still counts toward lifetime career averages.
+- **`round` (optional)**: Set to `quarter`, `semi`, or `final` for playoff matches.
+  Leave blank for regular season matches. Matches with a round will automatically
+  draw the completed playoff knockout bracket on the archive page without altering
+  regular season standings!
+- **Averages optional**: If PPD / MPR was not recorded for a leg, leave `g1a`, `g1b`
+  blank — the leg winner and match win/loss will still be fully counted toward points
+  and standings.
+- **Supports up to 5 legs**: `g1` through `g5` for longer knockout series.
 - Publish this tab the same way (**File → Share → Publish to web** →
   pick `History` → CSV → Publish), then paste the link into `historyCsvUrl`
   in `data/config.js`:
 
   ```js
   sheet: {
-    enabled: false,          // this can stay false
-    playersCsvUrl: "",
-    matchesCsvUrl: "",
+    enabled: true,
+    playersCsvUrl: "...",
+    matchesCsvUrl: "...",
     historyCsvUrl: "PASTE_THE_HISTORY_LINK_HERE"
   }
   ```

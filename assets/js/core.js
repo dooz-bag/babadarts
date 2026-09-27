@@ -553,6 +553,70 @@
     return null;
   };
 
+  // Matches tagged with a specific competition ID or name (from history or current season)
+  D.archiveMatches = function (compId) {
+    if (!compId) return [];
+    var target = String(compId).trim().toLowerCase();
+    var a = D.archiveItem(compId);
+    var targetName = a && a.name ? a.name.trim().toLowerCase() : "";
+    return (D.allMatchesEver() || []).filter(function (m) {
+      if (!m.competition) return false;
+      var c = String(m.competition).trim().toLowerCase();
+      return c === target || (targetName && c === targetName);
+    });
+  };
+
+  // Standings and stats calculated automatically from logged matches for a past competition.
+  // Uses regular season matches (where round is empty) so playoff matches don't distort the table.
+  D.archiveStats = function (compId, includePlayoffs) {
+    var all = D.archiveMatches(compId);
+    if (!all.length) return [];
+    var regular = all.filter(function (m) { return !m.round; });
+    var matches = (!includePlayoffs && regular.length) ? regular : all;
+    var ids = {};
+    matches.forEach(function (m) { ids[m.a] = true; ids[m.b] = true; });
+    var stats = Object.keys(ids).map(function (id) {
+      var s = computeStats(id, matches);
+      s.player = D.player(id);
+      return s;
+    });
+    stats.sort(function (x, y) {
+      if (y.points !== x.points) return y.points - x.points;
+      var diffX = x.legsFor - x.legsAgainst, diffY = y.legsFor - y.legsAgainst;
+      if (diffY !== diffX) return diffY - diffX;
+      return (y.ppd || 0) - (x.ppd || 0);
+    });
+    return stats;
+  };
+
+  // Playoff knockout data extracted from matches with round = quarter/semi/final
+  D.archivePlayoffs = function (compId) {
+    var all = D.archiveMatches(compId);
+    var playoffMatches = all.filter(function (m) { return !!m.round; });
+    var quarters = playoffMatches.filter(function (m) { return m.round === "quarter"; });
+    var semis = playoffMatches.filter(function (m) { return m.round === "semi"; });
+    var finals = playoffMatches.filter(function (m) { return m.round === "final"; });
+
+    var champ = null, runnerUp = null;
+    if (finals.length) {
+      var fm = finals[0];
+      var s = D.legScore(fm);
+      if (s.a !== s.b) {
+        champ = s.a > s.b ? D.player(fm.a) : D.player(fm.b);
+        runnerUp = s.a > s.b ? D.player(fm.b) : D.player(fm.a);
+      }
+    }
+
+    return {
+      matches: playoffMatches,
+      quarters: quarters,
+      semis: semis,
+      finals: finals,
+      champion: champ,
+      runnerUp: runnerUp
+    };
+  };
+
   /* ------------------------------------------- optional: google sheets --- */
 
   function parseCsv(text) {
@@ -598,21 +662,32 @@
     return def;
   }
 
-  // Shared by the Matches tab and the History tab — same sixteen columns
-  // (date, group, playerA, playerB, then three legs of game/winner/a/b).
+  // Shared by the Matches tab and the History tab.
+  // Supports up to 5 legs (g1 through g5).
+  // History tab can also optionally include:
+  //   - `competition` / `season`: matches an archive item ID (e.g. "2026-spring")
+  //   - `round`: "quarter", "semi", or "final" for playoff matches (blank = regular season)
   function rowsToMatches(objs) {
     return objs.map(function (r) {
       var legs = [];
-      [1, 2, 3].forEach(function (n) {
+      [1, 2, 3, 4, 5].forEach(function (n) {
         var g = r["g" + n + "game"], w = r["g" + n + "winner"];
-        if (!g || !w) return;
+        if (!w) return;
+        g = g ? String(g).trim() : "leg";
         legs.push({
           game: g.toLowerCase(), winner: w,
           aStat: numOrNull(r["g" + n + "a"]), bStat: numOrNull(r["g" + n + "b"])
         });
       });
+      var rawRound = String(r.round || r.stage || "").trim().toLowerCase();
+      var normRound = "";
+      if (/quarter|qf/.test(rawRound)) normRound = "quarter";
+      else if (/semi|sf/.test(rawRound)) normRound = "semi";
+      else if (/final|fn/.test(rawRound)) normRound = "final";
       return {
         date: r.date, group: (r.group || "").toUpperCase(),
+        competition: (r.competition || r.season || r.comp || "").trim(),
+        round: normRound,
         a: r.playera || r.a, b: r.playerb || r.b, legs: legs
       };
     }).filter(function (m) { return m.a && m.b && m.legs.length; });

@@ -38,10 +38,11 @@
 (function () {
   window.DATSU = window.DATSU || {};
 
-  function m(date, group, a, b, legs) {
+  function m(date, group, a, b, legs, comp) {
     return {
       date: date,
       group: group,
+      competition: comp || "",
       a: a,
       b: b,
       legs: legs.map(function (l) {

@@ -1,6 +1,5 @@
-date,group,playerA,playerB,g1game,g1winner,g1a,g1b,g2game,g2winner,g2a,g2b,g3game,g3winner,g3a,g3b
-2024-10-07,A,alex,yuki,701,alex,23.8,21.0,cricket,yuki,2.10,2.35,701,yuki,21.5,22.9
-2024-10-07,A,marco,priya,701,marco,19.6,17.9,cricket,marco,2.22,1.95,,,,
-2024-10-14,B,dave,ana,701,dave,26.4,20.1,cricket,ana,2.21,2.38,701,dave,25.8,20.1
-2024-10-14,B,ryo,chloe,701,ryo,20.2,18.8,cricket,ryo,2.40,2.05,,,,
-2024-11-25,,dave,alex,701,dave,25.0,22.3,cricket,alex,2.18,2.40,701,dave,24.6,23.1
+competition,date,group,playerA,playerB,g1game,g1winner,g1a,g1b,g2game,g2winner,g2a,g2b,g3game,g3winner,g3a,g3b,g4game,g4winner,g4a,g4b,g5game,g5winner,g5a,g5b,round
+2026-spring,2026-03-02,A,alex,yuki,701,alex,23.8,21.0,cricket,yuki,2.10,2.35,701,yuki,21.5,22.9,,,,,,,,
+2026-spring,2026-03-02,A,marco,priya,701,marco,,,,cricket,marco,,,,,,,,,,,,
+2026-spring,2026-04-10,,alex,marco,701,alex,25.0,21.0,cricket,alex,2.40,2.10,701,alex,24.0,20.0,,,,,,,,semi
+2026-spring,2026-04-17,,alex,yuki,701,yuki,24.0,26.0,cricket,alex,2.30,2.10,701,yuki,22.0,24.0,cricket,yuki,2.20,2.50,,,,final
