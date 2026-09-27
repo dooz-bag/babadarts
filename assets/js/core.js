@@ -360,8 +360,10 @@
 
   // Works out the various "best of" leaders from any list of stats objects
   // (D.allStats() for this season, D.allCareerStats() for all-time).
-  D.leadersFrom = function (statsList) {
-    var all = statsList.filter(function (s) { return s.played > 0; });
+  // `minGames` optionally requires a minimum number of matches played to qualify.
+  D.leadersFrom = function (statsList, minGames) {
+    var min = minGames || 1;
+    var all = statsList.filter(function (s) { return s.played >= min; });
 
     function top(key, getter) {
       var best = null;
@@ -378,7 +380,7 @@
       bestCricket: top("mpr", function (s) { return s.mpr; }),
       bestOverall: top("index", function (s) { return s.index; }),
       mostWins: top("won", function (s) { return s.won; }),
-      bestWinPct: top("winPct", function (s) { return s.played >= 2 ? s.winPct : null; }),
+      bestWinPct: top("winPct", function (s) { return s.played >= Math.max(min, 2) ? s.winPct : null; }),
       high01Game: top("best01", function (s) { return s.best01 ? s.best01.value : null; }),
       highCricketGame: top("bestCricket", function (s) { return s.bestCricket ? s.bestCricket.value : null; }),
       // Fun ones
@@ -406,7 +408,10 @@
   D.leaders = function () { return D.leadersFrom(D.allStats()); };
 
   // Best-of leaders across every match ever logged, not just this season.
-  D.careerLeaders = function () { return D.leadersFrom(D.allCareerStats()); };
+  // Requires at least 5 games played to qualify for career leader cards.
+  D.careerLeaders = function (minGames) {
+    return D.leadersFrom(D.allCareerStats(), minGames !== undefined ? minGames : 5);
+  };
 
   /* --------------------------------------------------- playoff bracket --- */
 

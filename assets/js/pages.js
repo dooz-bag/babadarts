@@ -457,7 +457,10 @@
 
   // Builds one sortable stats table into `containerId`. Used for both this
   // season's table and the career/all-time one — same columns, different data.
-  function buildSortableStatsTable(containerId, tableId, data, defaultSortKey) {
+  function buildSortableStatsTable(containerId, tableId, data, defaultSortKey, opts) {
+    opts = opts || {};
+    var showGroup = opts.showGroup !== false;
+    var cols = showGroup ? STAT_COLS : STAT_COLS.filter(function (c) { return c.key !== "group"; });
     var sortKey = defaultSortKey || "index", sortDir = -1;
 
     function draw() {
@@ -469,7 +472,7 @@
         return sortDir * (a - b);
       });
 
-      var head = STAT_COLS.map(function (c) {
+      var head = cols.map(function (c) {
         var cls = (c.type === "num" ? "num" : "") +
           (c.key === sortKey ? (sortDir === -1 ? " sorted-desc" : " sorted-asc") : "");
         return '<th class="' + cls + '" data-key="' + c.key + '">' + U.esc(c.label) + '</th>';
@@ -481,7 +484,7 @@
         }).join("");
         return '<tr>' +
           '<td>' + playerCellHtml(r.player) + '</td>' +
-          '<td>' + U.esc(r.group) + '</td>' +
+          (showGroup ? ('<td>' + U.esc(r.group) + '</td>') : '') +
           '<td class="mono">' + (form || '<span class="muted">\u2013</span>') + '</td>' +
           '<td class="num">' + r.played + '</td>' +
           '<td class="num">' + r.won + '</td>' +
@@ -524,20 +527,22 @@
         history.length + ' logged result' + (history.length === 1 ? '' : 's') + ' from before it.'
       : 'All logged results across every season and tournament combined into overall career averages.');
 
-    /* All-time leader cards */
-    var CL = D.careerLeaders();
+    /* All-time leader cards (requires min 5 games played) */
+    var CL = D.careerLeaders(5);
     leaderTint = 0;
     set("records-alltime",
       leaderCard("Best overall index — career", CL.bestOverall, "ダーツ Index") +
       leaderCard("Best 01 average — career", CL.best01, "01 Avg") +
       leaderCard("Best cricket average — career", CL.bestCricket, "Cricket Avg") +
       leaderCard("Most career wins", CL.mostWins, "matches won") +
-      leaderCard("Best career win rate", CL.bestWinPct, "%", "Min. 2 played") +
+      leaderCard("Best career win rate", CL.bestWinPct, "%") +
       leaderCard("All-time high 01 game", CL.high01Game, "PPD",
-        CL.high01Game && CL.high01Game.stats && CL.high01Game.stats.best01 ? "v " + D.playerName(CL.high01Game.stats.best01.opponent) : "", "accent"));
+        CL.high01Game && CL.high01Game.stats && CL.high01Game.stats.best01 ? "v " + D.playerName(CL.high01Game.stats.best01.opponent) : "", "accent") +
+      leaderCard("All-time high cricket game", CL.highCricketGame, "MPR",
+        CL.highCricketGame && CL.highCricketGame.stats && CL.highCricketGame.stats.bestCricket ? "v " + D.playerName(CL.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
-    /* Sortable overall career table */
-    buildSortableStatsTable("stats-table", "careerStatsTable", careerRows, "played");
+    /* Sortable overall career table (without Group column) */
+    buildSortableStatsTable("stats-table", "careerStatsTable", careerRows, "played", { showGroup: false });
 
     set("stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
@@ -545,7 +550,7 @@
       '<p><strong>Cricket Avg (MPR)</strong> — career marks per round in cricket across all games.</p>' +
       '<p><strong>ダーツ Index</strong> — our single rating combining the two, where 60 PPD in 01 and ' +
       '2.5 MPR in cricket would score 100.</p>' +
-      '<p class="muted tiny">Tap any column heading to re-sort the table. Looking for this season only? Head over to the <a href="league.html#season-stats">League Table</a> page.</p></div>');
+      '<p class="muted tiny"><strong>* Note on career leaderboards:</strong> A minimum of <strong>5 matches played</strong> is required to qualify for career leader cards. Tap any column heading to re-sort the table. Looking for this season only? Head over to the <a href="league.html#season-stats">League Table</a> page.</p></div>');
 
     /* Roll of honour from the archive */
     var champs = (D.archive || []).filter(function (a) { return a.champion; });
