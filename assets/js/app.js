@@ -45,16 +45,19 @@
   };
 
   D.photoHtml = function (photo) {
-    var src = U.esc(photo.src);
+    var rawSrc = photo.src || "";
+    // If a path wasn't prefixed (e.g. just "foo.jpg"), assume it's in assets/img/archive/
+    var src = rawSrc.indexOf("/") === -1 ? ("assets/img/archive/" + rawSrc) : rawSrc;
+    var escSrc = U.esc(src);
     var cap = U.esc(photo.caption || "");
     var fallback =
       '<div class=\'photo-missing\'>' +
       '<div class=\'big\'>◎</div>' +
       '<div>Photo not added yet — drop a file in at</div>' +
-      '<code>' + src + '</code>' +
+      '<code>' + escSrc + '</code>' +
       '</div>';
     return '<figure class="shot">' +
-      '<img src="' + src + '" alt="' + cap + '" loading="lazy" ' +
+      '<img src="' + escSrc + '" alt="' + cap + '" loading="lazy" ' +
       'onerror="this.outerHTML=' + JSON.stringify(fallback).replace(/"/g, "&quot;") + '">' +
       (cap ? '<figcaption>' + cap + '</figcaption>' : '') +
       '</figure>';
