@@ -1003,7 +1003,6 @@
   }
 
   function legFieldsetHtml(n, defaultGame) {
-    var unit = defaultGame === "cricket" ? "MPR" : "PPD";
     var g1 = U.esc(D.config.rules.game1), g2 = U.esc(D.config.rules.game2);
     return '<fieldset class="leg-fields">' +
       '<legend>Leg ' + n + (n === 3 ? ' <span class="muted">\u2014 only if it went to a decider</span>' : '') + '</legend>' +
@@ -1015,9 +1014,9 @@
       '</select></div>' +
       '<div class="field"><label for="rf-g' + n + '-winner">Winner</label>' +
       '<select id="rf-g' + n + '-winner"><option value="">\u2013</option></select></div>' +
-      '<div class="field"><label id="rf-g' + n + '-a-label" for="rf-g' + n + '-a">' + unit + ' (A)</label>' +
+      '<div class="field"><label id="rf-g' + n + '-a-label" for="rf-g' + n + '-a">Avg (Player A)</label>' +
       '<input type="number" step="0.01" min="0" inputmode="decimal" id="rf-g' + n + '-a"></div>' +
-      '<div class="field"><label id="rf-g' + n + '-b-label" for="rf-g' + n + '-b">' + unit + ' (B)</label>' +
+      '<div class="field"><label id="rf-g' + n + '-b-label" for="rf-g' + n + '-b">Avg (Player B)</label>' +
       '<input type="number" step="0.01" min="0" inputmode="decimal" id="rf-g' + n + '-b"></div>' +
       '</div></fieldset>';
   }
@@ -1046,12 +1045,14 @@
       '<form id="resultForm" class="card">' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-date">Date</label><input type="date" id="rf-date" value="' + todayIso() + '" required></div>' +
-      '<div class="field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
       '<div class="field checkbox-field"><label><input type="checkbox" id="rf-backfill"> Old result, from before this season</label></div>' +
       '</div>' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-a">Player A</label><select id="rf-a">' + playerOpts + '</select></div>' +
       '<div class="field"><label for="rf-b">Player B</label><select id="rf-b">' + playerOpts + '</select></div>' +
+      '</div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
       '</div>' +
       legFieldsetHtml(1, "701") +
       legFieldsetHtml(2, "cricket") +
@@ -1088,21 +1089,27 @@
       });
     }
 
+    function refreshAvgLabels() {
+      var aId = $("rf-a").value, bId = $("rf-b").value;
+      var aName = aId ? D.player(aId).name : "Player A";
+      var bName = bId ? D.player(bId).name : "Player B";
+      [1, 2, 3].forEach(function (n) {
+        $("rf-g" + n + "-a-label").textContent = "Avg (" + aName + ")";
+        $("rf-g" + n + "-b-label").textContent = "Avg (" + bName + ")";
+      });
+    }
+
     $("rf-a").addEventListener("change", function () {
       refreshWinnerOptions();
+      refreshAvgLabels();
       var groupSel = $("rf-group");
       if (!groupSel.dataset.touched && this.value) groupSel.value = D.player(this.value).group || "";
     });
-    $("rf-b").addEventListener("change", refreshWinnerOptions);
-    $("rf-group").addEventListener("change", function () { this.dataset.touched = "1"; });
-
-    [1, 2, 3].forEach(function (n) {
-      $("rf-g" + n + "-game").addEventListener("change", function () {
-        var unit = this.value === "cricket" ? "MPR" : "PPD";
-        $("rf-g" + n + "-a-label").textContent = unit + " (A)";
-        $("rf-g" + n + "-b-label").textContent = unit + " (B)";
-      });
+    $("rf-b").addEventListener("change", function () {
+      refreshWinnerOptions();
+      refreshAvgLabels();
     });
+    $("rf-group").addEventListener("change", function () { this.dataset.touched = "1"; });
 
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
@@ -1162,11 +1169,8 @@
             showMsg("ok", "Result submitted \u2014 nice one. It can take a few minutes to show up on the site (that\u2019s Google caching the sheet, not this site being slow).");
             form.reset();
             refreshWinnerOptions();
+            refreshAvgLabels();
             delete $("rf-group").dataset.touched;
-            [1, 2, 3].forEach(function (n) {
-              $("rf-g" + n + "-a-label").textContent = (n === 2 ? "MPR" : "PPD") + " (A)";
-              $("rf-g" + n + "-b-label").textContent = (n === 2 ? "MPR" : "PPD") + " (B)";
-            });
           } else {
             showMsg("err", (res && res.error) || "The sheet said no \u2014 check the passcode and try again.");
           }
