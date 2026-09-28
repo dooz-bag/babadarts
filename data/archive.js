@@ -24,6 +24,8 @@ DATSU.archive = [
     venue: "HUB高田馬場店",
     champion: "",
     runnerUp: "",
+    playoffSpots: 4,
+    byesPerGroup: 0,
     blurb: "Running from March to May 2026. The first timer Brady goes undefeated in the group stage only to lose to the powerhouse Ken in the finals.",
     highlights: [],
     finalTable: [],

@@ -293,10 +293,10 @@
     var legend =
       '<div class="legend">' +
       (shape.byesPerGroup > 0 ? '<span class="l-bye">Round-one bye (top ' + shape.byesPerGroup + ')</span>' : '') +
-      '<span class="l-po">Playoff places' +
+      '<span class="l-po">Qualified for Playoff' +
       (shape.byesPerGroup > 0 ? ' (' + (shape.byesPerGroup + 1) + '\u2013' + shape.perGroup + ')' : ' (top ' + shape.perGroup + ')') +
       '</span>' +
-      '<span class="l-out">Outside the places</span>' +
+      '<span class="l-out">Did not Qualify</span>' +
       '</div>';
 
     /* One section per group */
@@ -822,10 +822,10 @@
         var legend =
           '<div class="legend">' +
           (byes > 0 ? '<span class="l-bye">Bye (top ' + byes + ')</span>' : '') +
-          '<span class="l-po">Playoff qualifier' +
+          '<span class="l-po">Qualified for Playoff' +
           (byes > 0 ? ' (' + (byes + 1) + '\u2013' + spots + ')' : (spots ? ' (top ' + spots + ')' : '')) +
           '</span>' +
-          '<span class="l-out">Outside the places</span>' +
+          '<span class="l-out">Did not Qualify</span>' +
           '</div>';
 
         return '<div class="section">' +
@@ -879,10 +879,10 @@
       var legendFinal =
         '<div class="legend">' +
         (byesFinal > 0 ? '<span class="l-bye">Bye (top ' + byesFinal + ')</span>' : '') +
-        '<span class="l-po">Playoff qualifier' +
-        (byesFinal > 0 ? ' (' + (byesFinal + 1) + '–' + spotsFinal + ')' : (spotsFinal ? ' (top ' + spotsFinal + ')' : '')) +
+        '<span class="l-po">Qualified for Playoff' +
+        (byesFinal > 0 ? ' (' + (byesFinal + 1) + '\u2013' + spotsFinal + ')' : (spotsFinal ? ' (top ' + spotsFinal + ')' : '')) +
         '</span>' +
-        '<span class="l-out">Outside the places</span>' +
+        '<span class="l-out">Did not Qualify</span>' +
         '</div>';
 
       html += '<div class="section"><h2>Final table</h2><div class="table-wrap"><table class="data">' +
