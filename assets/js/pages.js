@@ -811,6 +811,23 @@
       groupsList.sort();
 
       function renderArchiveTable(rows, title) {
+        var spots = (a.playoffSpots || (D.config && D.config.rules && D.config.rules.playoffSpots)) || 6;
+        var byes = a.byesPerGroup !== undefined ? a.byesPerGroup : ((D.config && D.config.rules && D.config.rules.byesPerGroup) || 0);
+
+        var poPlayerIds = {};
+        if (playoffs && playoffs.matches && playoffs.matches.length) {
+          playoffs.matches.forEach(function (m) { poPlayerIds[m.a] = true; poPlayerIds[m.b] = true; });
+        }
+
+        var legend =
+          '<div class="legend">' +
+          (byes > 0 ? '<span class="l-bye">Bye (top ' + byes + ')</span>' : '') +
+          '<span class="l-po">Playoff qualifier' +
+          (byes > 0 ? ' (' + (byes + 1) + '\u2013' + spots + ')' : (spots ? ' (top ' + spots + ')' : '')) +
+          '</span>' +
+          '<span class="l-out">Outside the places</span>' +
+          '</div>';
+
         return '<div class="section">' +
           (title ? '<h3 style="margin-bottom:12px">' + U.esc(title) + '</h3>' : '') +
           '<div class="table-wrap"><table class="data">' +
@@ -823,10 +840,17 @@
           '<th class="num" title="Best single-game cricket average">Best Cricket</th>' +
           '<th class="num" title="ダーツ Index — combined 01 + cricket rating">Index</th></tr></thead><tbody>' +
           rows.map(function (s, i) {
-            return '<tr><td><span class="pos">' + (i + 1) + '</span></td>' +
+            var pos = i + 1;
+            var qualified = Object.keys(poPlayerIds).length ? !!poPlayerIds[s.player.id] : (pos <= spots);
+            var isBye = byes > 0 && pos <= byes;
+            var zone = isBye ? "bye" : (qualified ? "playoff" : "out");
+            var cut = (pos === byes || pos === spots) && rows.length >= pos + 1;
+
+            return '<tr class="zone-' + zone + (cut ? ' cutline' : '') + '">' +
+              '<td><span class="pos">' + pos + '</span></td>' +
               '<td>' + playerCellHtml(s.player) + '</td>' +
               '<td class="num">' + s.played + '</td>' +
-              '<td class="num">' + s.won + '</td>' +
+              '<td class="num"><strong>' + s.won + '</strong></td>' +
               '<td class="num">' + s.lost + '</td>' +
               '<td class="num">' + s.legsFor + '</td>' +
               '<td class="num">' + s.legsAgainst + '</td>' +
@@ -835,7 +859,7 @@
               '<td class="num">' + U.num(s.mpr) + '</td>' +
               '<td class="num">' + U.num(s.bestCricket ? s.bestCricket.value : null) + '</td>' +
               '<td class="num">' + U.num(s.index, 1) + '</td></tr>';
-          }).join("") + '</tbody></table></div></div>';
+          }).join("") + '</tbody></table></div>' + legend + '</div>';
       }
 
       html += '<div class="section"><h2>Regular season standings</h2>';
@@ -849,17 +873,34 @@
       }
       html += '</div>';
     } else if (a.finalTable && a.finalTable.length) {
+      var spotsFinal = (a.playoffSpots || (D.config && D.config.rules && D.config.rules.playoffSpots)) || 6;
+      var byesFinal = a.byesPerGroup !== undefined ? a.byesPerGroup : ((D.config && D.config.rules && D.config.rules.byesPerGroup) || 0);
+
+      var legendFinal =
+        '<div class="legend">' +
+        (byesFinal > 0 ? '<span class="l-bye">Bye (top ' + byesFinal + ')</span>' : '') +
+        '<span class="l-po">Playoff qualifier' +
+        (byesFinal > 0 ? ' (' + (byesFinal + 1) + '–' + spotsFinal + ')' : (spotsFinal ? ' (top ' + spotsFinal + ')' : '')) +
+        '</span>' +
+        '<span class="l-out">Outside the places</span>' +
+        '</div>';
+
       html += '<div class="section"><h2>Final table</h2><div class="table-wrap"><table class="data">' +
         '<thead><tr><th>#</th><th>Player</th><th class="num">W</th><th class="num">L</th>' +
         '<th class="num">01 Avg</th><th class="num">Cricket Avg</th></tr></thead><tbody>' +
         a.finalTable.map(function (r) {
-          return '<tr><td><span class="pos">' + U.esc(r.pos) + '</span></td>' +
+          var pNum = parseInt(r.pos, 10);
+          var isBye = byesFinal > 0 && pNum <= byesFinal;
+          var zone = isBye ? "bye" : (pNum <= spotsFinal ? "playoff" : "out");
+          var cut = (pNum === byesFinal || pNum === spotsFinal) && a.finalTable.length >= pNum + 1;
+
+          return '<tr class="zone-' + zone + (cut ? ' cutline' : '') + '"><td><span class="pos">' + U.esc(r.pos) + '</span></td>' +
             '<td>' + U.esc(r.player) + '</td>' +
-            '<td class="num">' + U.esc(r.w) + '</td>' +
+            '<td class="num"><strong>' + U.esc(r.w) + '</strong></td>' +
             '<td class="num">' + U.esc(r.l) + '</td>' +
             '<td class="num">' + U.num(r.ppd) + '</td>' +
             '<td class="num">' + U.num(r.mpr) + '</td></tr>';
-        }).join("") + '</tbody></table></div></div>';
+        }).join("") + '</tbody></table></div>' + legendFinal + '</div>';
     }
 
     if (autoMatches.length) {
