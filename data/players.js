@@ -26,7 +26,7 @@ window.DATSU = window.DATSU || {};
 DATSU.players = [
   /* ---------------------------- GROUP A ---------------------------------- */
   { id: "alex",   name: "Alex Fielding",  dartslive: "GAZZA",      country: "England",   flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", group: "A", avatar: "", active: true, notes: ["2024 Autumn runner-up"] },
-  { id: "yuki",   name: "田中ユキ",         dartslive: "YUKI★",      country: "Japan",     flag: "🇯🇵", group: "A", avatar: "", active: true, notes: ["2024 Autumn champion", "Highest cricket MPR 2024"] },
+  { id: "yuki",   name: "田中ユキ",         dartslive: "YUKI★",      country: "Japan",     flag: "🇯🇵", group: "A", avatar: "", active: true, notes: ["2024 Autumn champion", "Highest Cricket Avg 2024"] },
   { id: "marco",  name: "Marco Rossi",    dartslive: "IL CAPO",    country: "Italy",     flag: "🇮🇹", group: "A", avatar: "", active: true, notes: [] },
   { id: "priya",  name: "Priya Nair",     dartslive: "P-NAIR",     country: "India",     flag: "🇮🇳", group: "A", avatar: "", active: true, notes: ["Most improved 2024"] },
   { id: "sam",    name: "Sam O'Connell",  dartslive: "SAMMY O",    country: "Ireland",   flag: "🇮🇪", group: "A", avatar: "", active: true, notes: [] },
@@ -38,7 +38,7 @@ DATSU.players = [
 
   /* ---------------------------- GROUP B ---------------------------------- */
   { id: "hana",   name: "佐藤ハナ",         dartslive: "HANA",       country: "Japan",     flag: "🇯🇵", group: "B", avatar: "", active: true, notes: ["2024 Spring champion"] },
-  { id: "dave",   name: "Dave Murphy",    dartslive: "MURPH",      country: "Ireland",   flag: "🇮🇪", group: "B", avatar: "", active: true, notes: ["Highest 01 PPD 2024"] },
+  { id: "dave",   name: "Dave Murphy",    dartslive: "MURPH",      country: "Ireland",   flag: "🇮🇪", group: "B", avatar: "", active: true, notes: ["Highest 01 Avg 2024"] },
   { id: "ana",    name: "Ana Torres",     dartslive: "TORRES",     country: "Spain",     flag: "🇪🇸", group: "B", avatar: "", active: true, notes: [] },
   { id: "ryo",    name: "中村リョウ",       dartslive: "RYO-BABA",   country: "Japan",     flag: "🇯🇵", group: "B", avatar: "", active: true, notes: [] },
   { id: "chloe",  name: "Chloé Dupont",   dartslive: "CHLO",       country: "France",    flag: "🇫🇷", group: "B", avatar: "", active: true, notes: [] },

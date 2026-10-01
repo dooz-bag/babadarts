@@ -68,7 +68,7 @@
       '<th class="num" title="Legs won">LF</th>' +
       '<th class="num" title="Legs lost">LA</th>' +
       '<th class="num" title="Leg difference">+/-</th>' +
-      (opts.showAverages === false ? '' : '<th class="num" title="01 average, points per dart">PPD</th><th class="num" title="Cricket average, marks per round">MPR</th>') +
+      (opts.showAverages === false ? '' : '<th class="num" title="01 average, points per dart (PPD)">01 Avg</th><th class="num" title="Cricket average, marks per round (MPR)">Cricket Avg</th>') +
       (opts.showOutlook === false ? '' : '<th>Outlook</th>') +
       '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
@@ -78,7 +78,7 @@
     var s = D.legScore(m);
     var legs = (m.legs || []).map(function (leg) {
       var isCricket = String(leg.game).toLowerCase() === "cricket";
-      var unit = isCricket ? "MPR" : "PPD";
+      var unit = isCricket ? "Cricket Avg" : "01 Avg";
       var label = isCricket ? "Cricket" : (leg.game && leg.game !== "leg" ? U.esc(leg.game) : U.esc(D.config.rules.game1));
       var hasStats = (typeof leg.aStat === "number" && !isNaN(leg.aStat)) || (typeof leg.bStat === "number" && !isNaN(leg.bStat));
       var statsSpan = hasStats ? ' <span class="muted">(' + U.num(leg.aStat) + " / " + U.num(leg.bStat) + ' ' + unit + ')</span>' : '';
@@ -215,14 +215,15 @@
     var words = cfg.leagueName.split(" ");
     set("hero-title", '<span class="accent">' + U.esc(words[0]) + '</span> ' +
       U.esc(words.slice(1).join(" ")));
-    set("hero-sub", U.esc(cfg.tagline) + " Soft tip, DARTSLIVE, and a running commentary nobody asked for.");
+    set("hero-sub", U.esc(cfg.tagline) + " Soft tip darts, plenty of alcohol, and a running commentary nobody asked for.");
     set("hero-art", D.logoSvg("100%"));
 
     set("hero-chips",
       '<span class="chip"><strong>' + D.activePlayers().length + '</strong> players</span>' +
       '<span class="chip"><strong>' + groups.length + '</strong> group' + (groups.length === 1 ? '' : 's') + '</span>' +
       '<span class="chip"><strong>' + U.esc(cfg.rules.matchFormat) + '</strong></span>' +
-      '<span class="chip">' + U.esc(cfg.rules.game1) + ' \u2192 ' + U.esc(cfg.rules.game2) + ' \u2192 <strong>cork choice</strong></span>' +
+      '<span class="chip" title="The third leg\u2019s game is picked by whoever wins the cork toss">' +
+      U.esc(cfg.rules.game1) + ' \u2192 ' + U.esc(cfg.rules.game2) + ' \u2192 <strong>Decider</strong></span>' +
       '<span class="chip">' + U.esc(cfg.venue.name) + '</span>');
 
     set("status-board", statusBadgeHtml());
@@ -317,8 +318,8 @@
       '<p><strong>01 Avg (PPD)</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
       ' legs, stats from DARTSLIVE result screen. Higher is better.</p>' +
       '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket.</p>' +
-      '<p><strong>ダーツ Index</strong> \u2014 our single rating combining the two, where 60 PPD in 01 and ' +
-      '2.5 MPR in cricket would score 100.</p>' +
+      '<p><strong>ダーツ Index</strong> \u2014 our single rating combining the two, where a 01 Avg of 60 and a ' +
+      'Cricket Avg of 2.5 would both score 100.</p>' +
       '<p class="muted tiny">Tap any column heading to re-sort the table.</p></div>');
 
     var L = D.leaders();
@@ -331,9 +332,9 @@
       leaderCard("Best win rate", L.bestWinPct, "%"));
 
     set("season-records-games",
-      leaderCard("Highest single 01 game", L.high01Game, "PPD",
+      leaderCard("Highest single 01 game", L.high01Game, "01 Avg",
         L.high01Game ? "v " + D.playerName(L.high01Game.stats.best01.opponent) : "", "accent") +
-      leaderCard("Highest single cricket game", L.highCricketGame, "MPR",
+      leaderCard("Highest single cricket game", L.highCricketGame, "Cricket Avg",
         L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
     /* ------------------------------ this season's match history collapse --- */
@@ -552,9 +553,9 @@
       leaderCard("Best cricket average — career", CL.bestCricket, "Cricket Avg") +
       leaderCard("Most career wins", CL.mostWins, "matches won") +
       leaderCard("Best career win rate", CL.bestWinPct, "%") +
-      leaderCard("All-time high 01 game", CL.high01Game, "PPD",
+      leaderCard("All-time high 01 game", CL.high01Game, "01 Avg",
         CL.high01Game && CL.high01Game.stats && CL.high01Game.stats.best01 ? "v " + D.playerName(CL.high01Game.stats.best01.opponent) : "", "accent") +
-      leaderCard("All-time high cricket game", CL.highCricketGame, "MPR",
+      leaderCard("All-time high cricket game", CL.highCricketGame, "Cricket Avg",
         CL.highCricketGame && CL.highCricketGame.stats && CL.highCricketGame.stats.bestCricket ? "v " + D.playerName(CL.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
     /* Sortable overall career table (without Group column) */
@@ -564,8 +565,8 @@
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
       '<p><strong>01 Avg (PPD)</strong> — career points per dart in 01 legs across all games.</p>' +
       '<p><strong>Cricket Avg (MPR)</strong> — career marks per round in cricket across all games.</p>' +
-      '<p><strong>ダーツ Index</strong> — our single rating combining the two, where 60 PPD in 01 and ' +
-      '2.5 MPR in cricket would score 100.</p>' +
+      '<p><strong>ダーツ Index</strong> — our single rating combining the two, where a 01 Avg of 60 and a ' +
+      'Cricket Avg of 2.5 would both score 100.</p>' +
       '<p class="muted tiny"><strong>* Note on career leaderboards:</strong> A minimum of <strong>5 matches played</strong> is required to qualify for career leader cards. Tap any column heading to re-sort the table. Looking for this season only? Head over to the <a href="league.html#season-stats">League Table</a> page.</p></div>');
 
     /* Roll of honour from the archive */
@@ -575,15 +576,33 @@
       '<th>Competition</th><th>When</th><th>Champion</th><th>Runner-up</th><th></th>' +
       '</tr></thead><tbody>' +
       champs.map(function (a) {
+        var href = 'season.html?s=' + encodeURIComponent(a.id);
         return '<tr>' +
-          '<td>' + U.esc(a.name) + '</td>' +
+          '<td><a href="' + href + '">' + U.esc(a.name) + '</a></td>' +
           '<td class="muted">' + U.esc(a.dates) + '</td>' +
           '<td><strong class="accent-good">' + U.esc(a.champion) + '</strong></td>' +
           '<td class="muted">' + U.esc(a.runnerUp || "\u2013") + '</td>' +
-          '<td><a href="season.html?s=' + encodeURIComponent(a.id) + '">View \u2192</a></td>' +
+          '<td><a href="' + href + '">View \u2192</a></td>' +
           '</tr>';
       }).join("") + '</tbody></table></div>'
       : '<p class="muted">No past competitions recorded yet.</p>');
+
+    // Same data, told as a trophy case instead of a table. League titles
+    // get a gold medal and a glow; one-day tournaments get a medal too,
+    // just a smaller, quieter one — still worth a badge, not a crown.
+    set("honour-badges", champs.length
+      ? '<div class="honour-badges">' +
+        champs.map(function (a) {
+          var isTournament = a.type === "tournament";
+          return '<a class="honour-badge ' + (isTournament ? "tournament" : "league") + '" ' +
+            'href="season.html?s=' + encodeURIComponent(a.id) + '">' +
+            '<div class="medal">' + (isTournament ? "\ud83c\udfaf" : "\ud83c\udfc6") + '</div>' +
+            '<p class="event">' + U.esc(isTournament ? "Tournament" : "League") + '</p>' +
+            '<p class="champ">' + U.esc(a.champion) + '</p>' +
+            '<p class="when">' + U.esc(a.name) + '</p>' +
+            '</a>';
+        }).join("") + '</div>'
+      : '');
   };
 
   /* ========================================================== PLAYERS === */
@@ -1014,9 +1033,9 @@
       '</select></div>' +
       '<div class="field"><label for="rf-g' + n + '-winner">Winner</label>' +
       '<select id="rf-g' + n + '-winner"><option value="">\u2013</option></select></div>' +
-      '<div class="field"><label id="rf-g' + n + '-a-label" for="rf-g' + n + '-a">Avg (Player A)</label>' +
+      '<div class="field"><label id="rf-g' + n + '-a-label" for="rf-g' + n + '-a">Avg (Player A) <span class="muted">\u2014 optional</span></label>' +
       '<input type="number" step="0.01" min="0" inputmode="decimal" id="rf-g' + n + '-a"></div>' +
-      '<div class="field"><label id="rf-g' + n + '-b-label" for="rf-g' + n + '-b">Avg (Player B)</label>' +
+      '<div class="field"><label id="rf-g' + n + '-b-label" for="rf-g' + n + '-b">Avg (Player B) <span class="muted">\u2014 optional</span></label>' +
       '<input type="number" step="0.01" min="0" inputmode="decimal" id="rf-g' + n + '-b"></div>' +
       '</div></fieldset>';
   }
@@ -1094,8 +1113,8 @@
       var aName = aId ? D.player(aId).name : "Player A";
       var bName = bId ? D.player(bId).name : "Player B";
       [1, 2, 3].forEach(function (n) {
-        $("rf-g" + n + "-a-label").textContent = "Avg (" + aName + ")";
-        $("rf-g" + n + "-b-label").textContent = "Avg (" + bName + ")";
+        $("rf-g" + n + "-a-label").innerHTML = "Avg (" + U.esc(aName) + ") <span class=\"muted\">\u2014 optional</span>";
+        $("rf-g" + n + "-b-label").innerHTML = "Avg (" + U.esc(bName) + ") <span class=\"muted\">\u2014 optional</span>";
       });
     }
 
@@ -1126,17 +1145,34 @@
       if (!isHistory && !group) return showErr("Pick a group \u2014 or tick \u201cOld result\u201d if this isn\u2019t part of the current season.");
 
       var legs = [];
+      var noAvgLegs = [];
       for (var n = 1; n <= 3; n++) {
         var game = $("rf-g" + n + "-game").value;
         var winner = $("rf-g" + n + "-winner").value;
         var aStat = $("rf-g" + n + "-a").value;
         var bStat = $("rf-g" + n + "-b").value;
-        var anyFilled = winner || aStat !== "" || bStat !== "";
-        var allFilled = winner && aStat !== "" && bStat !== "";
+        var statsGiven = aStat !== "" || bStat !== "";
+        var statsComplete = aStat !== "" && bStat !== "";
 
-        if (n <= 2 && !allFilled) return showErr("Fill in leg " + n + " completely \u2014 game, winner and both averages.");
-        if (n === 3 && anyFilled && !allFilled) return showErr("Leg 3 is half filled in \u2014 either finish it, or leave it all blank for a 2\u20130.");
-        if (allFilled) legs.push({ game: game, winner: winner, aStat: parseFloat(aStat), bStat: parseFloat(bStat) });
+        // Averages are optional, but half an average (one player's number
+        // with no sign of the other) is almost always a typo, not a choice.
+        if (statsGiven && !statsComplete) {
+          return showErr("Leg " + n + " has an average for one player but not the other \u2014 fill in both, or leave them both blank.");
+        }
+
+        if (n <= 2) {
+          if (!winner) return showErr("Pick a winner for leg " + n + ".");
+        } else if (!winner) {
+          if (statsGiven) return showErr("Leg 3 has an average filled in but no winner picked.");
+          continue; // leg 3 never happened — a clean 2–0, nothing more to collect
+        }
+
+        if (!statsComplete) noAvgLegs.push(n);
+        legs.push({
+          game: game, winner: winner,
+          aStat: statsComplete ? parseFloat(aStat) : null,
+          bStat: statsComplete ? parseFloat(bStat) : null
+        });
       }
 
       var winsA = legs.filter(function (l) { return l.winner === aId; }).length;
@@ -1146,6 +1182,14 @@
       }
       if (legs.length === 3 && Math.max(winsA, winsB) !== 2) {
         return showErr("Three legs in, but that doesn\u2019t add up to a 2\u20131. Double check the winners.");
+      }
+
+      if (noAvgLegs.length) {
+        var allMissing = noAvgLegs.length === legs.length;
+        var warnWhich = allMissing ? "this result" : "leg" + (noAvgLegs.length > 1 ? "s " : " ") + noAvgLegs.join(" & ");
+        var ok = window.confirm("No game averages recorded for " + warnWhich +
+          " \u2014 the win/loss and legs still count fine, you\u2019ll just skip this match in the 01 Avg/Cricket Avg stats. Submit anyway?");
+        if (!ok) return showMsg("", "");
       }
 
       var payload = {
