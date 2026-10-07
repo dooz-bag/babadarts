@@ -280,6 +280,53 @@
     });
   };
 
+  // A quick glimpse of one player's CURRENT SEASON: every match they've
+  // played so far (newest first) plus whoever is left in their group that
+  // they haven't played yet. Powers the League Table's "tap a name" popup.
+  D.playerSeasonGlimpse = function (pid) {
+    var player = D.player(pid);
+    var matches = D.sortedMatches().filter(function (m) { return m.a === pid || m.b === pid; });
+    var playedIds = {};
+    var legsFor = 0, legsAgainst = 0, won = 0, lost = 0;
+
+    var completed = matches.map(function (m) {
+      var isA = m.a === pid;
+      var oppId = isA ? m.b : m.a;
+      playedIds[oppId] = true;
+      var s = D.legScore(m);
+      var mine = isA ? s.a : s.b, theirs = isA ? s.b : s.a;
+      var win = mine > theirs;
+      legsFor += mine; legsAgainst += theirs;
+      if (win) won++; else lost++;
+      return { opponent: D.player(oppId), win: win, mine: mine, theirs: theirs, date: m.date };
+    });
+
+    // Whoever's left in their group that hasn't been played yet.
+    var upcoming = D.activePlayers()
+      .filter(function (p) { return p.id !== pid && p.group === player.group && !playedIds[p.id]; })
+      .map(function (p) { return { opponent: p }; });
+
+    return {
+      player: player,
+      completed: completed,
+      upcoming: upcoming,
+      record: { won: won, lost: lost, legsFor: legsFor, legsAgainst: legsAgainst, played: completed.length }
+    };
+  };
+
+  // Find any already-recorded match between two players this season (regular season).
+  D.findSeasonMatch = function (p1, p2) {
+    if (!p1 || !p2) return null;
+    var matches = D.sortedMatches();
+    for (var i = 0; i < matches.length; i++) {
+      var m = matches[i];
+      if ((m.a === p1 && m.b === p2) || (m.a === p2 && m.b === p1)) {
+        return m;
+      }
+    }
+    return null;
+  };
+
   /* ---------------------------------------------------------- standings --- */
 
   D.standings = function (group) {

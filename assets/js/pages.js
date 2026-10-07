@@ -20,12 +20,16 @@
   var ACCENTS = ["accent", "accent-cool", "accent-warm", "accent-good"];
   function groupAccent(i) { return ACCENTS[i % ACCENTS.length]; }
 
-  function playerCellHtml(player) {
-    return '<span class="player-cell">' +
-      D.avatarHtml(player) +
+  function playerCellHtml(player, clickable) {
+    var inner = D.avatarHtml(player) +
       '<span><span class="flag">' + U.esc(player.flag) + '</span> ' + U.esc(player.name) +
-      '<br><span class="dl">' + U.esc(player.dartslive) + '</span></span>' +
-      '</span>';
+      '<br><span class="dl">' + U.esc(player.dartslive) + '</span></span>';
+    if (clickable) {
+      return '<button type="button" class="player-cell player-cell-link" data-player-id="' +
+        U.esc(player.id) + '" aria-label="See ' + U.esc(player.name) + '\u2019s games this season">' +
+        inner + '</button>';
+    }
+    return '<span class="player-cell">' + inner + '</span>';
   }
 
   function outlookTag(outlook) {
@@ -45,7 +49,7 @@
       var cut = (r.pos === shape.byesPerGroup || r.pos === shape.perGroup) && limit >= r.pos + 1;
       return '<tr class="zone-' + r.zone + (cut ? ' cutline' : '') + '">' +
         '<td><span class="pos">' + r.pos + '</span></td>' +
-        '<td>' + playerCellHtml(r.player) + '</td>' +
+        '<td>' + playerCellHtml(r.player, opts.clickable) + '</td>' +
         '<td class="num">' + r.played + '</td>' +
         '<td class="num"><strong>' + r.won + '</strong></td>' +
         '<td class="num">' + r.lost + '</td>' +
@@ -306,12 +310,12 @@
       return '<section class="section" style="padding-top:0">' +
         groupHeading(g, i, '<p class="muted tiny" style="margin-top:-6px">Everyone plays everyone once \u2014 ' +
           played + ' match' + (played === 1 ? '' : 'es') + ' each, whenever you can get down to the bar.</p>') +
-        standingsTable(g) + legend +
+        standingsTable(g, { clickable: true }) + legend +
         '</section>';
     }).join(""));
 
     /* --------------------------------- this season's stats & leaders --- */
-    buildSortableStatsTable("season-stats-table", "seasonStatsTable", statsRowsFrom(D.allStats()), "index");
+    buildSortableStatsTable("season-stats-table", "seasonStatsTable", statsRowsFrom(D.allStats()), "index", { clickable: true });
 
     set("season-stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
@@ -500,7 +504,7 @@
           return '<span class="' + (f === "W" ? "accent-good" : "muted") + '">' + f + '</span>';
         }).join("");
         return '<tr>' +
-          '<td>' + playerCellHtml(r.player) + '</td>' +
+          '<td>' + playerCellHtml(r.player, opts.clickable) + '</td>' +
           (showGroup ? ('<td>' + U.esc(r.group) + '</td>') : '') +
           '<td class="mono">' + (form || '<span class="muted">\u2013</span>') + '</td>' +
           '<td class="num">' + r.played + '</td>' +
@@ -1040,6 +1044,17 @@
       '</div></fieldset>';
   }
 
+  function submitSuccessCardHtml(summary) {
+    return '<div class="card submit-success-card">' +
+      '<div class="submit-success-icon">\u2713</div>' +
+      '<h2 class="submit-success-title">Result Submitted!</h2>' +
+      '<p class="submit-success-summary">' + U.esc(summary.winnerName) + ' defeated ' + U.esc(summary.loserName) + ' (' + U.esc(summary.score) + ')</p>' +
+      '<p class="submit-success-meta">' + (summary.group ? 'Group ' + U.esc(summary.group) + ' \u00b7 ' : '') + U.esc(U.date ? U.date(summary.date) : summary.date) + '</p>' +
+      '<p class="muted tiny" style="max-width:380px;margin:0 auto 22px">Nice one! The result has been written to the Google Sheet. It may take a couple of minutes for Google\u2019s cache to reflect on the standings page.</p>' +
+      '<div class="btn-row"><button type="button" class="btn" id="rf-submit-another">Log another match</button></div>' +
+      '</div>';
+  }
+
   function submitFormHtml() {
     var players = D.activePlayers().slice().sort(function (x, y) { return x.name.localeCompare(y.name); });
     var groups = D.groups();
@@ -1060,19 +1075,24 @@
         '(see <code>docs/GOOGLE-SHEET.md</code>). It still saves to the sheet either way.</p>'
       : '';
 
-    return sheetWarning +
+    return '<div id="submit-form-wrap">' + sheetWarning +
       '<form id="resultForm" class="card">' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-date">Date</label><input type="date" id="rf-date" value="' + todayIso() + '" required></div>' +
-      '<div class="field checkbox-field"><label><input type="checkbox" id="rf-backfill"> Old result, from before this season</label></div>' +
+      '<div class="field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
       '</div>' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-a">Player A</label><select id="rf-a">' + playerOpts + '</select></div>' +
-      '<div class="field"><label for="rf-b">Player B</label><select id="rf-b">' + playerOpts + '</select></div>' +
+      '<div class="field"><label for="rf-b">Player B</label><select id="rf-b"><option value="">Choose Player A first\u2026</option></select></div>' +
       '</div>' +
-      '<div class="field-row">' +
-      '<div class="field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
+      '<div id="rf-matchup-note" style="display:none"></div>' +
+      '<details class="submit-history-toggle">' +
+      '<summary>\u25b8 Need to log an older match from before this season?</summary>' +
+      '<div class="history-box">' +
+      '<input type="checkbox" id="rf-backfill"> ' +
+      '<label for="rf-backfill">Yes, this is a past competition/tournament match (saves to History)</label>' +
       '</div>' +
+      '</details>' +
       legFieldsetHtml(1, "701") +
       legFieldsetHtml(2, "cricket") +
       legFieldsetHtml(3, "701") +
@@ -1082,19 +1102,22 @@
       '</div>' +
       '<div id="rf-msg" class="form-msg" aria-live="polite"></div>' +
       '<div class="btn-row"><button type="submit" class="btn" id="rf-submit">Submit result</button></div>' +
-      '</form>';
+      '</form>' +
+      '</div>';
   }
 
   function wireSubmitForm(submitUrl) {
     var form = $("resultForm");
     if (!form) return;
     var msg = $("rf-msg"), btn = $("rf-submit");
+    var abortCtrl = null;
 
     function showMsg(kind, text) {
       msg.className = "form-msg is-" + kind;
       msg.textContent = text;
     }
     function showErr(text) { showMsg("err", text); return false; }
+    function showWarn(text) { showMsg("warn", text); }
 
     function refreshWinnerOptions() {
       var aId = $("rf-a").value, bId = $("rf-b").value;
@@ -1118,17 +1141,104 @@
       });
     }
 
+    function refreshPlayerBOptions() {
+      var aId = $("rf-a").value;
+      var bSel = $("rf-b");
+      var prevB = bSel.value;
+      var isHistory = $("rf-backfill").checked;
+      var noteEl = $("rf-matchup-note");
+
+      if (!aId) {
+        bSel.innerHTML = '<option value="">Choose Player A first\u2026</option>';
+        bSel.disabled = false;
+        if (noteEl) noteEl.style.display = "none";
+        refreshWinnerOptions();
+        refreshAvgLabels();
+        return;
+      }
+
+      var playerA = D.player(aId);
+      var candidates = D.activePlayers().filter(function (p) { return p.id !== aId; });
+
+      // In regular season mode, filter opponents strictly to player A's group
+      if (!isHistory && playerA.group && playerA.group !== "?") {
+        candidates = candidates.filter(function (p) { return p.group === playerA.group; });
+      }
+      candidates.sort(function (x, y) { return x.name.localeCompare(y.name); });
+
+      var optsHtml = '<option value="">Choose Player B\u2026</option>';
+      candidates.forEach(function (p) {
+        var existing = !isHistory ? (D.findSeasonMatch ? D.findSeasonMatch(aId, p.id) : null) : null;
+        if (existing) {
+          var s = D.legScore(existing);
+          var legStr = (existing.a === aId) ? (s.a + "\u2013" + s.b) : (s.b + "\u2013" + s.a);
+          optsHtml += '<option value="' + U.esc(p.id) + '" disabled>' +
+            U.esc(p.flag) + ' ' + U.esc(p.name) + ' (Already played: ' + legStr + ' on ' + U.esc(existing.date) + ')</option>';
+        } else {
+          optsHtml += '<option value="' + U.esc(p.id) + '">' + U.esc(p.flag) + ' ' + U.esc(p.name) + '</option>';
+        }
+      });
+
+      bSel.innerHTML = optsHtml;
+      bSel.disabled = false;
+
+      // Keep previous selection only if still valid and not disabled
+      var matchOpt = bSel.querySelector('option[value="' + prevB + '"]:not([disabled])');
+      if (matchOpt) bSel.value = prevB; else bSel.value = "";
+
+      checkMatchupWarning();
+      refreshWinnerOptions();
+      refreshAvgLabels();
+    }
+
+    function checkMatchupWarning() {
+      var aId = $("rf-a").value, bId = $("rf-b").value;
+      var noteEl = $("rf-matchup-note");
+      if (!noteEl) return;
+      var isHistory = $("rf-backfill").checked;
+
+      if (!aId || !bId || isHistory) {
+        noteEl.style.display = "none";
+        noteEl.innerHTML = "";
+        return;
+      }
+
+      var existing = D.findSeasonMatch ? D.findSeasonMatch(aId, bId) : null;
+      if (existing) {
+        var s = D.legScore(existing);
+        var dateFormatted = U.date ? U.date(existing.date) : existing.date;
+        noteEl.className = "matchup-note is-played";
+        noteEl.innerHTML = '\u26a0\ufe0f <strong>Match already recorded:</strong> ' +
+          U.esc(D.playerName(existing.a)) + ' (' + s.a + ') v ' +
+          U.esc(D.playerName(existing.b)) + ' (' + s.b + ') on ' + U.esc(dateFormatted) + '.';
+        noteEl.style.display = "flex";
+      } else {
+        noteEl.style.display = "none";
+        noteEl.innerHTML = "";
+      }
+    }
+
     $("rf-a").addEventListener("change", function () {
-      refreshWinnerOptions();
-      refreshAvgLabels();
+      var aId = this.value;
       var groupSel = $("rf-group");
-      if (!groupSel.dataset.touched && this.value) groupSel.value = D.player(this.value).group || "";
+      if (!groupSel.dataset.touched && aId) {
+        var p = D.player(aId);
+        if (p && p.group && p.group !== "?") groupSel.value = p.group;
+      }
+      refreshPlayerBOptions();
     });
+
     $("rf-b").addEventListener("change", function () {
+      checkMatchupWarning();
       refreshWinnerOptions();
       refreshAvgLabels();
     });
+
     $("rf-group").addEventListener("change", function () { this.dataset.touched = "1"; });
+
+    $("rf-backfill").addEventListener("change", function () {
+      refreshPlayerBOptions();
+    });
 
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
@@ -1138,11 +1248,42 @@
       var isHistory = $("rf-backfill").checked;
       var group = $("rf-group").value;
       var aId = $("rf-a").value, bId = $("rf-b").value;
+      var passcode = $("rf-passcode").value;
 
       if (!date) return showErr("Pick a date.");
       if (!aId || !bId) return showErr("Pick both players.");
       if (aId === bId) return showErr("Player A and Player B can\u2019t be the same person.");
       if (!isHistory && !group) return showErr("Pick a group \u2014 or tick \u201cOld result\u201d if this isn\u2019t part of the current season.");
+
+      // Check if this match was already recorded this season
+      if (!isHistory) {
+        var existing = D.findSeasonMatch ? D.findSeasonMatch(aId, bId) : null;
+        if (existing) {
+          var proceed = window.confirm(
+            "A match between " + D.playerName(aId) + " and " + D.playerName(bId) +
+            " was already logged on " + existing.date + ".\n\nAre you sure you want to submit another?"
+          );
+          if (!proceed) return showMsg("", "");
+        }
+      }
+
+      // Check recent submission cache to protect against rapid double-clicks / pub wifi confusion
+      var lastSubRaw = sessionStorage.getItem("datsu_last_sub");
+      if (lastSubRaw) {
+        try {
+          var lastSub = JSON.parse(lastSubRaw);
+          var elapsedSec = Math.round((Date.now() - (lastSub.time || 0)) / 1000);
+          var isSameMatch = ((lastSub.a === aId && lastSub.b === bId) || (lastSub.a === bId && lastSub.b === aId));
+          if (isSameMatch && elapsedSec < 300) {
+            var minAgo = Math.max(1, Math.round(elapsedSec / 60));
+            var allowDup = window.confirm(
+              "You just submitted a match for " + D.playerName(aId) + " v " + D.playerName(bId) +
+              " about " + minAgo + " minute(s) ago.\n\nDid you mean to submit another, or did you accidentally tap submit twice?"
+            );
+            if (!allowDup) return showMsg("", "");
+          }
+        } catch (e) {}
+      }
 
       var legs = [];
       var noAvgLegs = [];
@@ -1154,8 +1295,6 @@
         var statsGiven = aStat !== "" || bStat !== "";
         var statsComplete = aStat !== "" && bStat !== "";
 
-        // Averages are optional, but half an average (one player's number
-        // with no sign of the other) is almost always a typo, not a choice.
         if (statsGiven && !statsComplete) {
           return showErr("Leg " + n + " has an average for one player but not the other \u2014 fill in both, or leave them both blank.");
         }
@@ -1164,7 +1303,7 @@
           if (!winner) return showErr("Pick a winner for leg " + n + ".");
         } else if (!winner) {
           if (statsGiven) return showErr("Leg 3 has an average filled in but no winner picked.");
-          continue; // leg 3 never happened — a clean 2–0, nothing more to collect
+          continue;
         }
 
         if (!statsComplete) noAvgLegs.push(n);
@@ -1193,35 +1332,90 @@
       }
 
       var payload = {
-        passcode: $("rf-passcode").value,
+        passcode: passcode,
         target: isHistory ? "history" : "matches",
         date: date, group: group, a: aId, b: bId, legs: legs
       };
 
-      btn.disabled = true;
-      showMsg("pending", "Sending\u2026");
+      // Summary details for the confirmation screen
+      var matchWinnerId = winsA > winsB ? aId : bId;
+      var matchLoserId = winsA > winsB ? bId : aId;
+      var matchScore = Math.max(winsA, winsB) + "\u2013" + Math.min(winsA, winsB);
+      var subSummary = {
+        winnerName: D.playerName(matchWinnerId),
+        loserName: D.playerName(matchLoserId),
+        score: matchScore,
+        group: group,
+        date: date
+      };
 
-      fetch(submitUrl, {
+      btn.disabled = true;
+      btn.textContent = "Chucking dart at sheet\u2026";
+      showMsg("pending", "Whispering your score to the Google Sheet across the pub Wi-Fi\u2026 don\u2019t panic.");
+
+      // 20-second timeout to handle poor pub Wi-Fi gracefully without permanently hanging
+      if (window.AbortController) {
+        abortCtrl = new AbortController();
+      }
+      var timeoutId = setTimeout(function () {
+        if (abortCtrl) abortCtrl.abort();
+      }, 20000);
+
+      var fetchOpts = {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids a CORS preflight Apps Script can't answer
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
-      })
+      };
+      if (abortCtrl) fetchOpts.signal = abortCtrl.signal;
+
+      fetch(submitUrl, fetchOpts)
         .then(function (r) { return r.json(); })
         .then(function (res) {
+          clearTimeout(timeoutId);
           btn.disabled = false;
+          btn.textContent = "Submit result";
+
           if (res && res.ok) {
-            showMsg("ok", "Result submitted \u2014 nice one. It can take a few minutes to show up on the site (that\u2019s Google caching the sheet, not this site being slow).");
-            form.reset();
-            refreshWinnerOptions();
-            refreshAvgLabels();
-            delete $("rf-group").dataset.touched;
+            // Save to session cache to prevent rapid double-clicks
+            try {
+              sessionStorage.setItem("datsu_last_sub", JSON.stringify({
+                a: aId, b: bId, time: Date.now()
+              }));
+            } catch (e) {}
+
+            // Replace the form with a clear success card
+            var wrap = $("submit-form-wrap");
+            if (wrap) {
+              wrap.innerHTML = submitSuccessCardHtml(subSummary);
+              var anotherBtn = $("rf-submit-another");
+              if (anotherBtn) {
+                anotherBtn.addEventListener("click", function () {
+                  wrap.outerHTML = submitFormHtml();
+                  wireSubmitForm(submitUrl);
+                });
+              }
+            }
           } else {
             showMsg("err", (res && res.error) || "The sheet said no \u2014 check the passcode and try again.");
           }
         })
-        .catch(function () {
+        .catch(function (err) {
+          clearTimeout(timeoutId);
           btn.disabled = false;
-          showMsg("err", "Couldn\u2019t reach the sheet \u2014 check your connection and try again.");
+          btn.textContent = "Retry submission";
+
+          var isTimeout = err && err.name === "AbortError";
+          if (isTimeout) {
+            showWarn(
+              "\ud83c\udf7a 20 seconds and no answer \u2014 HUB\u2019s Wi-Fi has clearly had one pint too many! " +
+              "The sheet might have actually taken the score before passing out, so please refresh the results to double check before you smash submit again."
+            );
+          } else {
+            showWarn(
+              "\ud83c\udfaf Couldn\u2019t reach the sheet \u2014 HUB\u2019s Wi-Fi is throwing darts in the dark again. " +
+              "Your score might have snuck through anyway, so refresh the results to double check before having another go."
+            );
+          }
         });
     });
   }

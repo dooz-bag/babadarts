@@ -204,6 +204,118 @@
     });
   }
 
+  /* ------------------------------------------------------ player glimpse --- */
+  /* A quick popup for one player's current season: shows their completed
+     games (win/loss + score, colour coded) first, then whoever's left in
+     their group that they haven't played yet, greyed out at the bottom.
+     Only wired up where pages opt in by marking a name with the
+     "player-cell-link" class (see playerCellHtml() in pages.js).         */
+
+  function glimpseRowHtml(row, kind) {
+    var opp = row.opponent;
+    var oppName = (opp.flag ? U.esc(opp.flag) + " " : "") + U.esc(opp.name);
+    var badge, dateHtml;
+
+    if (kind === "upcoming") {
+      badge = '<span class="glimpse-badge upcoming">UPCOMING</span>';
+      dateHtml = '<span class="glimpse-date muted">Not yet played</span>';
+    } else {
+      var tag = kind === "win" ? "WIN" : "LOSS";
+      badge = '<span class="glimpse-badge ' + kind + '">' + tag + " " + row.mine + "\u2013" + row.theirs + '</span>';
+      dateHtml = '<span class="glimpse-date">' + U.esc(U.date ? U.date(row.date) : (row.date || "")) + '</span>';
+    }
+
+    return '<div class="glimpse-row">' + badge +
+      '<span class="glimpse-opp">v. ' + oppName + '</span>' +
+      dateHtml +
+      '</div>';
+  }
+
+  function glimpseContentHtml(pid) {
+    var g = D.playerSeasonGlimpse(pid);
+    var p = g.player, rec = g.record;
+
+    var recordLine = rec.played
+      ? '<strong>' + rec.won + 'W\u2013' + rec.lost + 'L</strong> \u00b7 ' +
+        rec.legsFor + '\u2013' + rec.legsAgainst + ' legs'
+      : 'No matches played yet';
+    var sub = (p.group && p.group !== "?" ? 'Group ' + U.esc(p.group) + ' \u00b7 ' : '') + recordLine;
+
+    var completedHtml = g.completed.length
+      ? g.completed.map(function (row) { return glimpseRowHtml(row, row.win ? "win" : "loss"); }).join("")
+      : '<p class="muted tiny">No matches played yet this season.</p>';
+
+    var upcomingHtml = g.upcoming.length
+      ? '<div class="glimpse-section-label">Yet to play</div>' +
+        g.upcoming.map(function (row) { return glimpseRowHtml(row, "upcoming"); }).join("")
+      : "";
+
+    return {
+      avatar: D.avatarHtml(p, true),
+      name: (p.flag ? U.esc(p.flag) + " " : "") + U.esc(p.name),
+      sub: sub,
+      body: '<div class="glimpse-section-label">Completed matches</div>' + completedHtml + upcomingHtml
+    };
+  }
+
+  function wireGlimpseModal() {
+    var modal = document.getElementById("datsu-glimpse");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "datsu-glimpse";
+      modal.className = "glimpse-modal";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-modal", "true");
+      modal.setAttribute("aria-hidden", "true");
+      modal.innerHTML =
+        '<div class="glimpse-backdrop"></div>' +
+        '<div class="glimpse-dialog">' +
+        '  <button type="button" class="glimpse-close" aria-label="Close">&times;</button>' +
+        '  <div class="glimpse-head">' +
+        '    <div class="glimpse-avatar"></div>' +
+        '    <div>' +
+        '      <div class="glimpse-name"></div>' +
+        '      <div class="glimpse-sub"></div>' +
+        '    </div>' +
+        '  </div>' +
+        '  <div class="glimpse-body"></div>' +
+        '</div>';
+      document.body.appendChild(modal);
+
+      function close() {
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("lightbox-locked");
+      }
+
+      modal.addEventListener("click", function (e) {
+        if (e.target.closest(".glimpse-close") || e.target.classList.contains("glimpse-backdrop")) {
+          close();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && modal.classList.contains("open")) close();
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".player-cell-link");
+      if (!btn || !D.playerSeasonGlimpse) return;
+      var pid = btn.getAttribute("data-player-id");
+      if (!pid) return;
+
+      var c = glimpseContentHtml(pid);
+      modal.querySelector(".glimpse-avatar").innerHTML = c.avatar;
+      modal.querySelector(".glimpse-name").innerHTML = c.name;
+      modal.querySelector(".glimpse-sub").innerHTML = c.sub;
+      modal.querySelector(".glimpse-body").innerHTML = c.body;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("lightbox-locked");
+    });
+  }
+
   /* --------------------------------------------------------------- boot --- */
 
   function wireNav() {
@@ -224,6 +336,7 @@
     if (footer) footer.innerHTML = buildFooter();
     wireNav();
     wireLightbox();
+    wireGlimpseModal();
 
     document.title = (document.body.getAttribute("data-title") || "") +
       " · " + D.config.leagueShortName;

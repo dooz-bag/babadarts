@@ -325,6 +325,25 @@ table.data tbody tr:last-child td { border-bottom: none; }
 .player-cell .flag { font-size: 1rem; }
 .player-cell .dl { color: var(--dim); font-size: 0.76rem; }
 
+/* A player name that opens the quick-glimpse popup (league page only) */
+button.player-cell-link {
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--accent-cool);
+  cursor: pointer;
+  width: 100%;
+}
+button.player-cell-link:hover,
+button.player-cell-link:focus-visible {
+  color: var(--text);
+}
+button.player-cell-link:hover .dl,
+button.player-cell-link:focus-visible .dl { color: var(--dim); }
+
 /* Playoff zones — a coloured edge, not a wash of colour */
 tr.zone-bye td:first-child      { box-shadow: inset 3px 0 0 var(--accent-good); }
 tr.zone-playoff td:first-child  { box-shadow: inset 3px 0 0 var(--accent-cool); }
@@ -765,6 +784,132 @@ body.lightbox-locked { overflow: hidden; }
   max-width: 80vw;
 }
 
+/* --- PLAYER GLIMPSE (tap a name on the League Table for a quick look) - */
+.glimpse-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+.glimpse-modal.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.glimpse-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 12, 15, 0.88);
+  backdrop-filter: blur(6px);
+}
+.glimpse-dialog {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  padding: 22px 20px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: lightboxPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glimpse-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.glimpse-close:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.glimpse-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding-right: 28px;
+}
+.glimpse-name {
+  font-family: var(--font-head);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.glimpse-sub { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+.glimpse-section-label {
+  font-family: var(--font-head);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 16px 0 8px;
+}
+.glimpse-section-label:first-of-type { margin-top: 0; }
+.glimpse-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  margin-bottom: 6px;
+}
+.glimpse-badge {
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  text-align: center;
+  border: 1px solid currentColor;
+}
+.glimpse-badge.win { color: var(--accent-good); background: rgba(93, 168, 104, 0.12); }
+.glimpse-badge.loss { color: var(--accent); background: rgba(198, 92, 80, 0.1); }
+.glimpse-badge.upcoming { color: var(--dim); background: transparent; }
+.glimpse-opp {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+.glimpse-date { color: var(--dim); font-size: 0.76rem; white-space: nowrap; }
+
+@media (max-width: 560px) {
+  .glimpse-modal { padding: 0; align-items: flex-end; }
+  .glimpse-dialog {
+    max-width: 100%;
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 80vh;
+  }
+}
+
 /* --- COLLAPSIBLE MATCH RESULTS --------------------------------------- */
 .results-collapse {
   background: var(--panel);
@@ -938,6 +1083,45 @@ body.lightbox-locked { overflow: hidden; }
   font-size: 0.9rem; color: var(--muted); margin: 0;
 }
 .field.checkbox-field input { width: auto; }
+
+/* Subtle disclosure for backfilling old / past-season matches */
+.submit-history-toggle {
+  margin: 0 0 14px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.submit-history-toggle summary {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.submit-history-toggle summary:hover { color: var(--text); }
+.submit-history-toggle .history-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  background: var(--panel-2);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.submit-history-toggle .history-box input { width: auto; margin: 0; }
+.submit-history-toggle .history-box label {
+  cursor: pointer;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
 .leg-fields {
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -952,11 +1136,74 @@ body.lightbox-locked { overflow: hidden; }
   color: var(--accent-cool);
 }
 .leg-fields legend .muted { font-family: var(--font-body); font-weight: 400; font-size: 0.78rem; }
-.form-msg { min-height: 1.3em; margin: 6px 0 0; font-size: 0.9rem; }
+.form-msg { min-height: 1.3em; margin: 10px 0 0; font-size: 0.9rem; line-height: 1.45; }
 .form-msg.is-err  { color: var(--accent); }
 .form-msg.is-ok   { color: var(--accent-good); }
 .form-msg.is-pending { color: var(--muted); }
+.form-msg.is-warn { color: var(--accent-warm); }
 #resultForm .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Matchup / already-played notice under player selectors */
+.matchup-note {
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  margin: -4px 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.matchup-note.is-played {
+  background: rgba(198, 92, 80, 0.12);
+  border: 1px solid var(--accent);
+  color: #ff9d92;
+}
+.matchup-note.is-hint {
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  color: var(--muted);
+}
+
+/* Post-submission confirmation card */
+.submit-success-card {
+  text-align: center;
+  padding: 32px 20px 28px;
+  animation: lightboxPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.submit-success-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(93, 168, 104, 0.16);
+  border: 2px solid var(--accent-good);
+  color: var(--accent-good);
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.submit-success-title {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+.submit-success-summary {
+  font-size: 1.05rem;
+  color: var(--accent-good);
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.submit-success-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin: 0 0 20px;
+}
+.submit-success-card .btn-row {
+  justify-content: center;
+}
 
 /* -------------------------------------------------------------- FOOTER --- */
 .site-footer { border-top: 1px solid var(--line); background: var(--ink-2); padding: 36px 0 24px; margin-top: 36px; }
