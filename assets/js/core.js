@@ -549,6 +549,18 @@
     return null;
   };
 
+  // True if an archive entry has actual documented content (photos, results,
+  // final table, or logged match rows) rather than just a placeholder title.
+  D.isArchivePopulated = function (itemOrId) {
+    var a = typeof itemOrId === "string" ? D.archiveItem(itemOrId) : itemOrId;
+    if (!a) return false;
+    var hasPhotos = Array.isArray(a.photos) && a.photos.length > 0;
+    var hasResults = Array.isArray(a.results) && a.results.length > 0;
+    var hasTable = Array.isArray(a.finalTable) && a.finalTable.length > 0;
+    var hasMatches = D.archiveMatches ? D.archiveMatches(a.id).length > 0 : false;
+    return Boolean(hasPhotos || hasResults || hasTable || hasMatches);
+  };
+
   // Matches tagged with a specific competition ID or name (from history or current season)
   D.archiveMatches = function (compId) {
     if (!compId) return [];

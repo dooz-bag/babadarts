@@ -85,7 +85,9 @@
         n.label + '</a>';
     }).join("");
 
-    var archiveLinks = (D.archive || []).map(function (a) {
+    var archiveLinks = (D.archive || []).filter(function (a) {
+      return D.isArchivePopulated ? D.isArchivePopulated(a) : ((a.photos && a.photos.length) || (a.results && a.results.length));
+    }).map(function (a) {
       return '<a href="season.html?s=' + encodeURIComponent(a.id) + '">' +
         U.esc(a.name) + ' <span class="dd-type">· ' + U.esc(a.type) + '</span></a>';
     }).join("");
