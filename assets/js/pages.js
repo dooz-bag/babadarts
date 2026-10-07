@@ -252,7 +252,7 @@
     set("mini-tables", groups.map(function (g, i) {
       return '<div>' +
         '<h3 class="' + groupAccent(i) + '">Group ' + U.esc(g) + '</h3>' +
-        standingsTable(g, { showAverages: false, showOutlook: false }) +
+        standingsTable(g, { showAverages: false, showOutlook: false, clickable: true }) +
         '</div>';
     }).join(""));
 
