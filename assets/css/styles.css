@@ -493,6 +493,44 @@ a.honour-badge.league:hover {
 }
 .honour-badge.league .champ { color: var(--accent-gold); }
 
+/* Badges / cards for archived seasons with full photo galleries / match results */
+.archive-pill {
+  display: inline-block;
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-cool);
+  background: rgba(91, 143, 146, 0.16);
+  border: 1px solid var(--accent-cool);
+  border-radius: 999px;
+  padding: 3px 9px;
+  margin-top: 10px;
+}
+.honour-badge.is-populated {
+  border-color: var(--accent-cool);
+  box-shadow: 0 0 0 1px rgba(91, 143, 146, 0.25) inset, 0 0 20px -8px var(--accent-cool);
+}
+.archive-card-featured {
+  background: linear-gradient(165deg, var(--panel-2), var(--panel) 70%);
+  border: 1px solid var(--accent-cool);
+  box-shadow: 0 0 0 1px rgba(91, 143, 146, 0.2) inset, 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.archive-card-featured:hover {
+  transform: translateY(-3px);
+  border-color: #7abcc0;
+  box-shadow: 0 0 0 1px rgba(91, 143, 146, 0.35) inset, 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 24px -6px var(--accent-cool);
+}
+.archive-card-featured .featured-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  margin: 0;
+}
+
 /* One-day tournaments - still a medal, just not quite a league title.
    Smaller, flatter, no glow: respectable, not legendary.                */
 .honour-badge.tournament {

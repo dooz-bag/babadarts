@@ -394,6 +394,18 @@
       });
     });
 
+    // Sort every bucket by wins descending so the top-performing players appear first
+    Object.keys(buckets).forEach(function (k) {
+      buckets[k].sort(function (a, b) {
+        if (b.row.won !== a.row.won) return b.row.won - a.row.won;
+        // Tie-breaker: leg diff descending
+        var diffA = a.row.legsFor - a.row.legsAgainst;
+        var diffB = b.row.legsFor - b.row.legsAgainst;
+        if (diffB !== diffA) return diffB - diffA;
+        return a.row.pos - b.row.pos;
+      });
+    });
+
     function bucketCard(title, key, colour, blurb) {
       var list = buckets[key];
       return '<div class="card">' +
@@ -573,40 +585,28 @@
       'Cricket Avg of 2.5 would both score 100.</p>' +
       '<p class="muted tiny"><strong>* Note on career leaderboards:</strong> A minimum of <strong>5 matches played</strong> is required to qualify for career leader cards. Tap any column heading to re-sort the table. Looking for this season only? Head over to the <a href="league.html#season-stats">League Table</a> page.</p></div>');
 
-    /* Roll of honour from the archive */
+    /* Roll of honour from the archive (trophy case badges) */
     var champs = (D.archive || []).filter(function (a) { return a.champion; });
-    set("roll-of-honour", champs.length
-      ? '<div class="table-wrap"><table class="data"><thead><tr>' +
-      '<th>Competition</th><th>When</th><th>Champion</th><th>Runner-up</th><th></th>' +
-      '</tr></thead><tbody>' +
-      champs.map(function (a) {
-        var href = 'season.html?s=' + encodeURIComponent(a.id);
-        return '<tr>' +
-          '<td><a href="' + href + '">' + U.esc(a.name) + '</a></td>' +
-          '<td class="muted">' + U.esc(a.dates) + '</td>' +
-          '<td><strong class="accent-good">' + U.esc(a.champion) + '</strong></td>' +
-          '<td class="muted">' + U.esc(a.runnerUp || "\u2013") + '</td>' +
-          '<td><a href="' + href + '">View \u2192</a></td>' +
-          '</tr>';
-      }).join("") + '</tbody></table></div>'
-      : '<p class="muted">No past competitions recorded yet.</p>');
 
-    // Same data, told as a trophy case instead of a table. League titles
+    // Same data, told as a trophy case. League titles
     // get a gold medal and a glow; one-day tournaments get a medal too,
     // just a smaller, quieter one — still worth a badge, not a crown.
     set("honour-badges", champs.length
       ? '<div class="honour-badges">' +
         champs.map(function (a) {
           var isTournament = a.type === "tournament";
-          return '<a class="honour-badge ' + (isTournament ? "tournament" : "league") + '" ' +
+          var isPopulated = D.isArchivePopulated ? D.isArchivePopulated(a) : (a.photos && a.photos.length);
+          var badgeCls = "honour-badge " + (isTournament ? "tournament" : "league") + (isPopulated ? " is-populated" : "");
+          return '<a class="' + badgeCls + '" ' +
             'href="season.html?s=' + encodeURIComponent(a.id) + '">' +
             '<div class="medal">' + (isTournament ? "\ud83c\udfaf" : "\ud83c\udfc6") + '</div>' +
             '<p class="event">' + U.esc(isTournament ? "Tournament" : "League") + '</p>' +
             '<p class="champ">' + U.esc(a.champion) + '</p>' +
             '<p class="when">' + U.esc(a.name) + '</p>' +
+            (isPopulated ? '<span class="archive-pill">\u25ce Full Story &amp; Photos</span>' : '') +
             '</a>';
         }).join("") + '</div>'
-      : '');
+      : '<p class="muted">No past competitions recorded yet.</p>');
   };
 
   /* ========================================================== PLAYERS === */
@@ -685,13 +685,23 @@
       return;
     }
     set("archive-grid", items.map(function (a) {
-      return '<a class="card card-accent" href="season.html?s=' + encodeURIComponent(a.id) + '" style="display:block;color:inherit">' +
+      var isPopulated = D.isArchivePopulated ? D.isArchivePopulated(a) : (a.photos && a.photos.length);
+      var cardCls = "card " + (isPopulated ? "archive-card-featured" : "card-accent");
+      var badge = isPopulated ? '<span class="archive-pill featured-badge">\u25ce Full Story &amp; Photos</span>' : '';
+      var photoCount = (a.photos || []).length;
+      var resultsCount = (a.results || []).length;
+      var metaStr = (photoCount || resultsCount)
+        ? (photoCount + ' photo(s) \u00b7 ' + resultsCount + ' round(s) of results')
+        : 'Summary documented';
+
+      return '<a class="' + cardCls + '" href="season.html?s=' + encodeURIComponent(a.id) + '" style="display:block;color:inherit">' +
+        badge +
         '<p class="eyebrow">' + U.esc(a.type === "tournament" ? "Tournament" : "League") + ' \u00b7 ' + U.esc(a.dates) + '</p>' +
         '<h3>' + U.esc(a.name) + '</h3>' +
         '<p><span class="muted tiny">Champion</span><br><strong class="accent-good">' + U.esc(a.champion || "TBC") + '</strong></p>' +
         (a.runnerUp ? '<p class="muted tiny">Runner-up: ' + U.esc(a.runnerUp) + '</p>' : '') +
-        '<p class="muted tiny">' + U.esc((a.photos || []).length) + ' photo(s) \u00b7 ' + U.esc((a.results || []).length) + ' round(s) of results</p>' +
-        '<p class="accent-cool">View the page \u2192</p>' +
+        '<p class="muted tiny">' + U.esc(metaStr) + '</p>' +
+        '<p class="accent-cool">' + (isPopulated ? 'Explore season \u2192' : 'View summary \u2192') + '</p>' +
         '</a>';
     }).join(""));
   };
