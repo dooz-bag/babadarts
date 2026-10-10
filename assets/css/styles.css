@@ -1243,6 +1243,102 @@ body.lightbox-locked { overflow: hidden; }
   justify-content: center;
 }
 
+/* ---------------------------------- SCAN DARTSLIVE SCREEN (AI OCR) --- */
+.scan-card {
+  background: linear-gradient(165deg, var(--panel-2), var(--panel));
+  border: 1px dashed var(--accent-cool);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.scan-card-info h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-cool);
+}
+.scan-card-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 480px;
+}
+.scan-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.scan-upload-btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.submit-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--dim);
+  font-size: 0.76rem;
+  font-family: var(--font-head);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 22px;
+}
+.submit-divider::before, .submit-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Scan confirmation modal */
+.scan-preview-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: #000;
+  border: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+.scan-legs-summary {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin: 12px 0 16px;
+  font-size: 0.88rem;
+}
+.scan-legs-summary table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.scan-legs-summary th, .scan-legs-summary td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.scan-legs-summary th {
+  font-family: var(--font-head);
+  font-size: 0.76rem;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.scan-legs-summary tr:last-child td {
+  border-bottom: none;
+}
+
 /* -------------------------------------------------------------- FOOTER --- */
 .site-footer { border-top: 1px solid var(--line); background: var(--ink-2); padding: 36px 0 24px; margin-top: 36px; }
 .footer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }

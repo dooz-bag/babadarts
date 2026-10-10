@@ -1085,7 +1085,23 @@
         '(see <code>docs/GOOGLE-SHEET.md</code>). It still saves to the sheet either way.</p>'
       : '';
 
-    return '<div id="submit-form-wrap">' + sheetWarning +
+    var scanCardHtml = (cfg.resultsForm && cfg.resultsForm.scanUrl)
+      ? '<div class="scan-card">' +
+        '  <div class="scan-card-info">' +
+        '    <h3>\ud83d\udcf8 Scan Machine Screen</h3>' +
+        '    <p>Snap photo(s) of the DARTSLIVE screens (Match Summary and/or Stats page) \u2014 names, winners, and leg averages will be recognized and filled into the form for you.</p>' +
+        '  </div>' +
+        '  <label class="btn scan-upload-btn" id="rf-scan-btn">' +
+        '    <span id="rf-scan-label">\ud83d\udcf7 Select 1 or 2 Photos</span>' +
+        '    <input type="file" id="rf-scan-input" accept="image/*" multiple>' +
+        '  </label>' +
+        '</div>' +
+        '<div class="submit-divider">or fill in by hand</div>'
+      : '';
+
+    return '<div id="submit-form-wrap">' +
+      sheetWarning +
+      scanCardHtml +
       '<form id="resultForm" class="card">' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-date">Date</label><input type="date" id="rf-date" value="' + todayIso() + '" required></div>' +
@@ -1249,6 +1265,210 @@
     $("rf-backfill").addEventListener("change", function () {
       refreshPlayerBOptions();
     });
+
+    /* --- Vision OCR / Screen Scanner --- */
+    var scanInput = $("rf-scan-input");
+    var scanLabel = $("rf-scan-label");
+
+    function resizeImage(file, maxDimension, callback) {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement("canvas");
+          var width = img.width, height = img.height;
+          if (width > height) {
+            if (width > maxDimension) { height = Math.round((height * maxDimension) / width); width = maxDimension; }
+          } else {
+            if (height > maxDimension) { width = Math.round((width * maxDimension) / height); height = maxDimension; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showScanConfirmModal(data, previewDataUrls) {
+      var existingModal = $("scan-confirm-modal");
+      if (existingModal) existingModal.remove();
+
+      var modal = document.createElement("div");
+      modal.id = "scan-confirm-modal";
+      modal.className = "glimpse-modal open";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-modal", "true");
+
+      var pA = (data.playerA && data.playerA !== "unknown") ? (D.player(data.playerA) || { name: data.playerA, flag: "" }) : null;
+      var pB = (data.playerB && data.playerB !== "unknown") ? (D.player(data.playerB) || { name: data.playerB, flag: "" }) : null;
+
+      var playerHeader = "";
+      if (pA && pB) {
+        playerHeader = (pA.flag ? pA.flag + " " : "") + U.esc(pA.name) + ' <span class="muted">vs</span> ' + (pB.flag ? pB.flag + " " : "") + U.esc(pB.name);
+      } else if (pA) {
+        playerHeader = (pA.flag ? pA.flag + " " : "") + U.esc(pA.name) + ' <span class="muted">vs [Unknown opponent - select below]</span>';
+      } else {
+        playerHeader = '<span class="muted">[Select players below in form]</span>';
+      }
+
+      var legsHtml = (data.legs && data.legs.length)
+        ? data.legs.map(function (l, idx) {
+            var w = (l.winner && l.winner !== "unknown") ? (D.player(l.winner) || { name: l.winner }) : { name: "\u2013" };
+            return '<tr>' +
+              '<td><strong>Leg ' + (idx + 1) + '</strong> (' + U.esc(l.game || "") + ')</td>' +
+              '<td><strong class="accent-good">' + U.esc(w.name) + '</strong></td>' +
+              '<td class="mono">' + (l.aStat != null ? l.aStat : "\u2013") + ' / ' + (l.bStat != null ? l.bStat : "\u2013") + '</td>' +
+              '</tr>';
+          }).join("")
+        : '<tr><td colspan="3" class="muted">No legs detected</td></tr>';
+
+      var previewsHtml = previewDataUrls.map(function (url) {
+        return '<img src="' + url + '" class="scan-preview-img" alt="Screen photo preview" style="max-height:160px;margin-bottom:8px">';
+      }).join("");
+
+      modal.innerHTML =
+        '<div class="glimpse-backdrop"></div>' +
+        '<div class="glimpse-dialog">' +
+        '  <button type="button" class="glimpse-close" id="rf-scan-close" aria-label="Close">&times;</button>' +
+        '  <h3 style="margin:0 0 4px">Are these results correct?</h3>' +
+        '  <p class="muted tiny" style="margin:0 0 12px">Check the players, winners, and averages we read from the screen(s).</p>' +
+        '  <div style="display:flex;gap:8px;overflow-x:auto">' + previewsHtml + '</div>' +
+        '  <div style="font-size:1.05rem;font-weight:600;margin:10px 0 6px">' + playerHeader + '</div>' +
+        '  <div class="scan-legs-summary">' +
+        '    <table>' +
+        '      <thead><tr><th>Leg / Game</th><th>Winner</th><th>Averages (' + (pA ? U.esc(pA.name) : "P1") + ' / ' + (pB ? U.esc(pB.name) : "P2") + ')</th></tr></thead>' +
+        '      <tbody>' + legsHtml + '</tbody>' +
+        '    </table>' +
+        '  </div>' +
+        '  <div class="btn-row" style="margin-top:16px">' +
+        '    <button type="button" class="btn" id="rf-scan-accept">Looks good! Populate Form</button>' +
+        '    <button type="button" class="btn btn-quiet" id="rf-scan-reject">Cancel / Edit by hand</button>' +
+        '  </div>' +
+        '</div>';
+
+      document.body.appendChild(modal);
+      document.body.classList.add("lightbox-locked");
+
+      function closeModal() {
+        modal.remove();
+        document.body.classList.remove("lightbox-locked");
+      }
+
+      $("rf-scan-close").addEventListener("click", closeModal);
+      $("rf-scan-reject").addEventListener("click", closeModal);
+
+      $("rf-scan-accept").addEventListener("click", function () {
+        closeModal();
+
+        // Populate Player A
+        if (data.playerA && data.playerA !== "unknown" && D.player(data.playerA)) {
+          $("rf-a").value = data.playerA;
+          var p = D.player(data.playerA);
+          if (p && p.group && p.group !== "?") {
+            $("rf-group").value = p.group;
+            $("rf-group").dataset.touched = "1";
+          }
+          refreshPlayerBOptions();
+        }
+
+        // Populate Player B
+        if (data.playerB && data.playerB !== "unknown" && D.player(data.playerB)) {
+          $("rf-b").value = data.playerB;
+          checkMatchupWarning();
+          refreshWinnerOptions();
+          refreshAvgLabels();
+        }
+
+        // Populate Legs
+        if (data.legs && data.legs.length) {
+          data.legs.forEach(function (l, idx) {
+            var n = idx + 1;
+            if (n > 3) return;
+            if (l.game) {
+              var gVal = l.game.toLowerCase().includes("cricket") ? "cricket" : "701";
+              var gSel = $("rf-g" + n + "-game");
+              if (gSel) gSel.value = gVal;
+            }
+            if (l.winner && l.winner !== "unknown") {
+              var wSel = $("rf-g" + n + "-winner");
+              if (wSel) wSel.value = l.winner;
+            }
+            if (l.aStat != null) {
+              var aInp = $("rf-g" + n + "-a");
+              if (aInp) aInp.value = l.aStat;
+            }
+            if (l.bStat != null) {
+              var bInp = $("rf-g" + n + "-b");
+              if (bInp) bInp.value = l.bStat;
+            }
+          });
+        }
+
+        showMsg("ok", "\u2713 Screen data imported into the form! Verify the fields below, enter the league passcode, and submit.");
+        var formTop = form.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top: formTop, behavior: "smooth" });
+      });
+    }
+
+    if (scanInput && D.config.resultsForm && D.config.resultsForm.scanUrl) {
+      scanInput.addEventListener("change", function (ev) {
+        var files = ev.target.files;
+        if (!files || !files.length) return;
+
+        var fileArr = Array.prototype.slice.call(files).slice(0, 2); // max 2 files
+
+        scanInput.disabled = true;
+        scanLabel.textContent = "\u23f3 Scanning " + fileArr.length + " screen(s)\u2026";
+        showMsg("pending", "Analyzing " + fileArr.length + " photo(s) with AI\u2026 please wait.");
+
+        var resizedImages = [];
+        var loaded = 0;
+
+        fileArr.forEach(function (file, idx) {
+          resizeImage(file, 1200, function (dataUrl) {
+            resizedImages[idx] = dataUrl;
+            loaded++;
+            if (loaded === fileArr.length) {
+              var payload = {
+                images: resizedImages,
+                players: D.activePlayers().map(function (p) {
+                  return { id: p.id, name: p.name, dartslive: p.dartslive || p.name };
+                })
+              };
+
+              fetch(D.config.resultsForm.scanUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+              })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                  scanInput.disabled = false;
+                  scanLabel.textContent = "\ud83d\udcf7 Select 1 or 2 Photos";
+                  scanInput.value = "";
+
+                  if (res && res.ok && res.data) {
+                    showMsg("", "");
+                    showScanConfirmModal(res.data, resizedImages);
+                  } else {
+                    showMsg("err", (res && res.error) || "Couldn\u2019t parse the screen(s) \u2014 try again or enter the score manually.");
+                  }
+                })
+                .catch(function (err) {
+                  scanInput.disabled = false;
+                  scanLabel.textContent = "\ud83d\udcf7 Select 1 or 2 Photos";
+                  scanInput.value = "";
+                  showMsg("err", "Error connecting to screen scanner (" + (err.message || err) + "). You can still enter the result manually below.");
+                });
+            }
+          });
+        });
+      });
+    }
 
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();

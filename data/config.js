@@ -124,6 +124,8 @@ DATSU.config = {
      file is public source code, so anything typed in it can be read by
      anyone who views the page source.                                   */
   resultsForm: {
-    submitUrl: "https://script.google.com/macros/s/AKfycbzJSFdt1xyYcXBLhe-2tjqFTb0BZKbgyd-YhlRN56wc6ictP6-FLxSC1KGPPHUohIUz5A/exec"
+    submitUrl: "https://script.google.com/macros/s/AKfycbzJSFdt1xyYcXBLhe-2tjqFTb0BZKbgyd-YhlRN56wc6ictP6-FLxSC1KGPPHUohIUz5A/exec",
+    /* Optional: Cloudflare Worker URL to auto-read DARTSLIVE screens via OpenRouter */
+    scanUrl: "https://datsu-scan-screen.bradybyersku.workers.dev"
   }
 };
