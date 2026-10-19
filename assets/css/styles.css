@@ -26,7 +26,8 @@
   --accent-warm: #c99a44;   /* brass           */
   --accent-good: #5da868;   /* muted green     */
   --accent-gold: #d6b13a;   /* bright gold     */
-  --accent-plum: #9a6bab;   /* dusty purple    */
+  --accent-plum:   #9a6bab;   /* dusty purple    */
+  --accent-violet: #a855f7;   /* electric violet */
 
   --font-head: "Barlow Condensed", "Noto Sans JP", "Hiragino Sans", system-ui, sans-serif;
   --font-body: "Noto Sans JP", "Hiragino Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -404,6 +405,8 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
 .leader.tint-accent-good { border-left: 3px solid var(--accent-good); }
 .leader.tint-accent-gold { border-left: 3px solid var(--accent-gold); }
 .leader.tint-accent-plum { border-left: 3px solid var(--accent-plum); }
+.leader.tint-accent-violet { border-left: 3px solid var(--accent-violet); }
+.leader.tint-accent-violet .cat { color: var(--accent-violet); }
 
 /* A little extra flair for a leader card, used for the archive page's
    "best of the season" boxes -- a soft, diffused neon glow around the
@@ -928,6 +931,7 @@ body.lightbox-locked { overflow: hidden; }
 }
 .glimpse-badge.win { color: var(--accent-good); background: rgba(93, 168, 104, 0.12); }
 .glimpse-badge.loss { color: var(--accent); background: rgba(198, 92, 80, 0.1); }
+.glimpse-badge.forfeit { color: #f59e0b; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); }
 .glimpse-badge.upcoming { color: var(--dim); background: transparent; }
 .glimpse-opp {
   flex: 1;

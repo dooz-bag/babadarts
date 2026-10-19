@@ -86,6 +86,11 @@ DATSU.config = {
   },
 
   /* ---- Inside jokes (rotate in the footer) ---------------------------- */
+  /* ---- Forfeited players (leave empty [] when nobody is forfeited) ----
+     Any player in this list automatically gets an 0-2 loss for all past
+     and future regular season matches, while keeping their 01/cricket stats. */
+  forfeitedPlayers: ["will"],
+
   quips: [
     "Nice one.",
     "Excellent grouping, Mr Speaker.",

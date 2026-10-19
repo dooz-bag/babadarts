@@ -17,7 +17,7 @@
   /* ================================================== reusable pieces === */
 
   // Groups get a different accent colour each, cycling if there are lots.
-  var ACCENTS = ["accent", "accent-cool", "accent-warm", "accent-good"];
+  var ACCENTS = ["accent", "accent-cool", "accent-warm", "accent-good", "accent-violet"];
   function groupAccent(i) { return ACCENTS[i % ACCENTS.length]; }
 
   function playerCellHtml(player, clickable) {
@@ -88,6 +88,10 @@
       var statsSpan = hasStats ? ' <span class="muted">(' + U.num(leg.aStat) + " / " + U.num(leg.bStat) + ' ' + unit + ')</span>' : '';
       return '<span class="leg-pill">' + label + ' \u2192 ' + U.esc(D.player(leg.winner).name) + statsSpan + '</span>';
     }).join("");
+
+    if (s.forfeited) {
+      legs += ' <span class="leg-pill forfeit-pill" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)">Forfeit (0\u20132)</span>';
+    }
 
     return '<div class="result-row">' +
       '<span class="p' + (s.a > s.b ? ' winner' : '') + '">' + D.avatarHtml(pa) +
@@ -268,7 +272,7 @@
     set("home-leaders",
       leaderCard("Best 01 average", L.best01, "01 Avg") +
       leaderCard("Best cricket average", L.bestCricket, "Cricket Avg") +
-      leaderCard("Best overall index", L.bestOverall, "ダーツ Index"));
+      leaderCard("Best overall index", L.bestOverall, "ダーツ Index", null, "accent-violet"));
 
     /* Photos of the bar. Drop real files into assets/img/hub/ to replace
        the placeholders — the file names are shown on screen. */
@@ -342,7 +346,7 @@
         L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
     /* ------------------------------ this season's match history collapse --- */
-    var seasonMatches = D.sortedMatches() || [];
+    var seasonMatches = (D.sortedMatches() || []).filter(function (m) { return !m.isUnplayedForfeit; });
     if (seasonMatches.length) {
       set("season-matches-collapse",
         '<details class="results-collapse">' +

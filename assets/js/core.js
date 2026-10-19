@@ -68,10 +68,18 @@
 
   D.player = function (id) {
     for (var i = 0; i < D.players.length; i++) if (D.players[i].id === id) return D.players[i];
-    return { id: id, name: id, dartslive: "", country: "", flag: "", group: "?", avatar: "", notes: [] };
+    return { id: id, name: id, dartslive: "", country: "", flag: "", group: "?", avatar: "", notes: [], active: true, forfeited: false };
   };
 
   D.playerName = function (id) { return D.player(id).name; };
+
+  D.isPlayerForfeited = function (id) {
+    if (!id) return false;
+    var p = D.player(id);
+    if (p && p.forfeited) return true;
+    var list = (D.config && D.config.forfeitedPlayers) || [];
+    return list.indexOf(id) !== -1;
+  };
 
   // Everyone currently part of the league — i.e. not marked `active: false`.
   // A departed player still keeps their row in data/players.js (so career
@@ -138,6 +146,18 @@
 
   // How many legs each player won in a match
   D.legScore = function (match) {
+    var fa = D.isPlayerForfeited(match.a);
+    var fb = D.isPlayerForfeited(match.b);
+    if (fa && !fb) return { a: 0, b: 2, forfeited: match.a };
+    if (fb && !fa) return { a: 2, b: 0, forfeited: match.b };
+    var a = 0, b = 0;
+    (match.legs || []).forEach(function (leg) {
+      if (leg.winner === match.a) a++; else if (leg.winner === match.b) b++;
+    });
+    return { a: a, b: b };
+  };
+
+  D.rawLegScore = function (match) {
     var a = 0, b = 0;
     (match.legs || []).forEach(function (leg) {
       if (leg.winner === match.a) a++; else if (leg.winner === match.b) b++;
@@ -152,8 +172,33 @@
   };
 
   D.sortedMatches = function () {
-    return D.matches.slice().sort(function (x, y) {
-      return x.date < y.date ? 1 : x.date > y.date ? -1 : 0; // newest first
+    var list = (D.matches || []).slice();
+    var active = D.activePlayers();
+    var forfeitedPlayers = active.filter(function (p) { return D.isPlayerForfeited(p.id); });
+
+    forfeitedPlayers.forEach(function (fp) {
+      var groupPeers = active.filter(function (p) { return p.id !== fp.id && p.group === fp.group; });
+      groupPeers.forEach(function (peer) {
+        var already = list.some(function (m) {
+          return (m.a === fp.id && m.b === peer.id) || (m.a === peer.id && m.b === fp.id);
+        });
+        if (!already) {
+          list.push({
+            date: "",
+            group: fp.group,
+            a: peer.id,
+            b: fp.id,
+            legs: [],
+            isUnplayedForfeit: true
+          });
+        }
+      });
+    });
+
+    return list.sort(function (x, y) {
+      if (x.isUnplayedForfeit && !y.isUnplayedForfeit) return 1;
+      if (!x.isUnplayedForfeit && y.isUnplayedForfeit) return -1;
+      return x.date < y.date ? 1 : x.date > y.date ? -1 : 0;
     });
   };
 
@@ -171,6 +216,7 @@
   D.matchNights = function () {
     var map = {}, order = [];
     D.sortedMatches().forEach(function (m) {
+      if (m.isUnplayedForfeit || !m.date) return;
       if (!map[m.date]) { map[m.date] = []; order.push(m.date); }
       map[m.date].push(m);
     });
@@ -298,7 +344,16 @@
       var win = mine > theirs;
       legsFor += mine; legsAgainst += theirs;
       if (win) won++; else lost++;
-      return { opponent: D.player(oppId), win: win, mine: mine, theirs: theirs, date: m.date };
+      return {
+        opponent: D.player(oppId),
+        win: win,
+        mine: mine,
+        theirs: theirs,
+        date: m.date,
+        isForfeit: !!s.forfeited,
+        forfeitedPlayerId: s.forfeited || null,
+        isUnplayedForfeit: !!m.isUnplayedForfeit
+      };
     });
 
     // Whoever's left in their group that hasn't been played yet.
@@ -320,6 +375,7 @@
     var matches = D.sortedMatches();
     for (var i = 0; i < matches.length; i++) {
       var m = matches[i];
+      if (m.isUnplayedForfeit) continue;
       if ((m.a === p1 && m.b === p2) || (m.a === p2 && m.b === p1)) {
         return m;
       }
@@ -822,11 +878,23 @@
         var mt = toObjects(parseCsv(res[1]));
         if (!pl.length || !mt.length) throw new Error("Sheet looks empty");
 
+        var localForfeited = {};
+        (D.players || []).forEach(function (p) { if (p.forfeited) localForfeited[p.id] = true; });
+
         D.players = pl.map(function (r) {
+          var isForfeit = false;
+          if (r.forfeited !== undefined && r.forfeited !== null && String(r.forfeited).trim() !== "") {
+            isForfeit = parseBool(r.forfeited, false);
+          } else if (r.forfeit !== undefined && r.forfeit !== null && String(r.forfeit).trim() !== "") {
+            isForfeit = parseBool(r.forfeit, false);
+          } else if (localForfeited[r.id]) {
+            isForfeit = true;
+          }
           return {
             id: r.id, name: r.name || r.id, dartslive: r.dartslive || "",
             country: r.country || "", flag: r.flag || "", group: (r.group || "A").toUpperCase(),
             avatar: r.avatar || "", active: parseBool(r.active, true),
+            forfeited: isForfeit,
             notes: (r.notes || "").split("|").map(function (x) { return x.trim(); }).filter(Boolean)
           };
         }).filter(function (p) { return p.id; });

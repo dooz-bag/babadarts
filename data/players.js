@@ -13,6 +13,11 @@
    avatar      optional photo: "assets/img/players/yuki.jpg"
                leave as "" and the site draws a neon initials badge instead
    notes       accomplishments / honours, shown on the Players page
+   forfeited   true = player has forfeited / left the league mid-season.
+               All past and future games count as an 0-2 loss, while
+               keeping their 01 and cricket stats intact. They stay
+               at the bottom of the table without qualifying.
+
    active      true = currently in the league. Set to false when someone
                leaves instead of deleting their line — that keeps their
                name, flag and avatar attached to their career stats

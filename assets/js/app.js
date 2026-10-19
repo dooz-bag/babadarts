@@ -219,10 +219,15 @@
     if (kind === "upcoming") {
       badge = '<span class="glimpse-badge upcoming">UPCOMING</span>';
       dateHtml = '<span class="glimpse-date muted">Not yet played</span>';
+    } else if (kind === "forfeit") {
+      badge = '<span class="glimpse-badge forfeit">FORFEIT</span>';
+      dateHtml = '<span class="glimpse-date' + (row.date ? '' : ' muted') + '">' +
+        (row.date ? U.esc(U.date ? U.date(row.date) : row.date) : "Forfeit") + '</span>';
     } else {
       var tag = kind === "win" ? "WIN" : "LOSS";
       badge = '<span class="glimpse-badge ' + kind + '">' + tag + " " + row.mine + "\u2013" + row.theirs + '</span>';
-      dateHtml = '<span class="glimpse-date">' + U.esc(U.date ? U.date(row.date) : (row.date || "")) + '</span>';
+      dateHtml = '<span class="glimpse-date' + (row.date ? '' : ' muted') + '">' +
+        (row.date ? U.esc(U.date ? U.date(row.date) : row.date) : "Forfeit") + '</span>';
     }
 
     return '<div class="glimpse-row">' + badge +
@@ -242,7 +247,12 @@
     var sub = (p.group && p.group !== "?" ? 'Group ' + U.esc(p.group) + ' \u00b7 ' : '') + recordLine;
 
     var completedHtml = g.completed.length
-      ? g.completed.map(function (row) { return glimpseRowHtml(row, row.win ? "win" : "loss"); }).join("")
+      ? g.completed.map(function (row) {
+          var kind = (row.isForfeit && row.forfeitedPlayerId === pid)
+            ? "forfeit"
+            : (row.win ? "win" : "loss");
+          return glimpseRowHtml(row, kind);
+        }).join("")
       : '<p class="muted tiny">No matches played yet this season.</p>';
 
     var upcomingHtml = g.upcoming.length
