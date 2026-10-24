@@ -230,22 +230,52 @@
         (row.date ? U.esc(U.date ? U.date(row.date) : row.date) : "Forfeit") + '</span>';
     }
 
-    return '<div class="glimpse-row">' + badge +
+    var metaTags = "";
+    if (row.roundLabel) {
+      metaTags += '<span class="regal-tag">👑 ' + U.esc(row.roundLabel) + '</span>';
+    } else if (row.competition) {
+      metaTags += '<span class="glimpse-comp-tag">' + U.esc(row.competition) + '</span>';
+    }
+
+    var statsHtml = "";
+    if (row.legs && row.legs.length) {
+      var pills = row.legs.map(function (leg) {
+        if (leg.myStat === null) return "";
+        var val = U.num(leg.myStat, leg.isCricket ? 2 : 1) + " " + leg.unit;
+        var oppVal = (leg.oppStat !== null) ? ' <span class="muted">(' + U.num(leg.oppStat, leg.isCricket ? 2 : 1) + ')</span>' : '';
+        return '<span class="glimpse-stat-pill' + (leg.iWon ? ' leg-won' : '') + '">' +
+          U.esc(leg.game) + ': <strong>' + val + '</strong>' + oppVal + '</span>';
+      }).filter(Boolean).join(" ");
+
+      if (pills) statsHtml = '<div class="glimpse-row-stats">' + pills + '</div>';
+    }
+
+    var rowCls = "glimpse-row" + (row.isPlayoff ? " is-playoff" : "") + (metaTags || statsHtml ? " has-stats" : "");
+
+    return '<div class="' + rowCls + '">' +
+      '<div class="glimpse-row-main">' +
+      badge +
       '<span class="glimpse-opp">v. ' + oppName + '</span>' +
       dateHtml +
+      '</div>' +
+      ((metaTags || statsHtml) ? ('<div class="glimpse-row-meta">' + metaTags + statsHtml + '</div>') : '') +
       '</div>';
   }
 
-  function glimpseContentHtml(pid) {
-    var g = D.playerSeasonGlimpse(pid);
+  function glimpseContentHtml(pid, isCareer) {
+    var g = isCareer && D.playerCareerGlimpse
+      ? D.playerCareerGlimpse(pid)
+      : D.playerSeasonGlimpse(pid);
     var p = g.player, rec = g.record;
 
     var recordLine = rec.played
       ? '<strong>' + rec.won + 'W\u2013' + rec.lost + 'L</strong> \u00b7 ' +
         rec.legsFor + '\u2013' + rec.legsAgainst + ' legs'
       : 'No matches played yet';
-    var sub = (p.group && p.group !== "?" ? 'Group ' + U.esc(p.group) + ' \u00b7 ' : '') + recordLine;
+    var prefix = isCareer ? 'All-Time Career \u00b7 ' : (p.group && p.group !== "?" ? 'Group ' + U.esc(p.group) + ' \u00b7 ' : '');
+    var sub = prefix + recordLine;
 
+    var sectionTitle = isCareer ? "Career match history" : "Completed matches";
     var completedHtml = g.completed.length
       ? g.completed.map(function (row) {
           var kind = (row.isForfeit && row.forfeitedPlayerId === pid)
@@ -253,9 +283,9 @@
             : (row.win ? "win" : "loss");
           return glimpseRowHtml(row, kind);
         }).join("")
-      : '<p class="muted tiny">No matches played yet this season.</p>';
+      : '<p class="muted tiny">No matches played yet ' + (isCareer ? 'on record.' : 'this season.') + '</p>';
 
-    var upcomingHtml = g.upcoming.length
+    var upcomingHtml = (g.upcoming && g.upcoming.length)
       ? '<div class="glimpse-section-label">Yet to play</div>' +
         g.upcoming.map(function (row) { return glimpseRowHtml(row, "upcoming"); }).join("")
       : "";
@@ -264,7 +294,7 @@
       avatar: D.avatarHtml(p, true),
       name: (p.flag ? U.esc(p.flag) + " " : "") + U.esc(p.name),
       sub: sub,
-      body: '<div class="glimpse-section-label">Completed matches</div>' + completedHtml + upcomingHtml
+      body: '<div class="glimpse-section-label">' + sectionTitle + ' (' + g.completed.length + ')</div>' + completedHtml + upcomingHtml
     };
   }
 
@@ -315,7 +345,9 @@
       var pid = btn.getAttribute("data-player-id");
       if (!pid) return;
 
-      var c = glimpseContentHtml(pid);
+      var page = document.body.getAttribute("data-page") || "";
+      var isCareer = (page === "stats");
+      var c = glimpseContentHtml(pid, isCareer);
       modal.querySelector(".glimpse-avatar").innerHTML = c.avatar;
       modal.querySelector(".glimpse-name").innerHTML = c.name;
       modal.querySelector(".glimpse-sub").innerHTML = c.sub;

@@ -93,7 +93,19 @@
       legs += ' <span class="leg-pill forfeit-pill" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)">Forfeit (0\u20132)</span>';
     }
 
-    return '<div class="result-row">' +
+    var round = String(m.round || "").trim().toLowerCase();
+    var isPlayoff = /quarter|qf|semi|sf|final|fn|playoff/.test(round) || /playoff/.test(String(m.competition || "").toLowerCase());
+    var roundLabel = "";
+    if (/final|fn/.test(round)) roundLabel = "Playoff Final";
+    else if (/semi|sf/.test(round)) roundLabel = "Playoff Semi-Final";
+    else if (/quarter|qf/.test(round)) roundLabel = "Playoff Quarter-Final";
+    else if (isPlayoff) roundLabel = "Playoffs";
+
+    if (roundLabel) {
+      legs = '<span class="leg-pill regal-pill">👑 ' + roundLabel + '</span> ' + legs;
+    }
+
+    return '<div class="result-row' + (isPlayoff ? ' is-playoff' : '') + '">' +
       '<span class="p' + (s.a > s.b ? ' winner' : '') + '">' + D.avatarHtml(pa) +
       '<span class="nm">' + U.esc(pa.flag) + ' ' + U.esc(pa.name) + '</span></span>' +
       '<span class="score">' + s.a + ' \u2013 ' + s.b + '</span>' +
@@ -579,7 +591,7 @@
         CL.highCricketGame && CL.highCricketGame.stats && CL.highCricketGame.stats.bestCricket ? "v " + D.playerName(CL.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
     /* Sortable overall career table (without Group column) */
-    buildSortableStatsTable("stats-table", "careerStatsTable", careerRows, "played", { showGroup: false });
+    buildSortableStatsTable("stats-table", "careerStatsTable", careerRows, "played", { showGroup: false, clickable: true });
 
     set("stats-help",
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +

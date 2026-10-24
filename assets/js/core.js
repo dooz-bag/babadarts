@@ -326,12 +326,12 @@
     });
   };
 
-  // A quick glimpse of one player's CURRENT SEASON: every match they've
-  // played so far (newest first) plus whoever is left in their group that
-  // they haven't played yet. Powers the League Table's "tap a name" popup.
-  D.playerSeasonGlimpse = function (pid) {
+  // Player match history: either this season only (careerMode = false) or
+  // all logged matches across career (careerMode = true).
+  D.playerMatches = function (pid, careerMode) {
     var player = D.player(pid);
-    var matches = D.sortedMatches().filter(function (m) { return m.a === pid || m.b === pid; });
+    var pool = careerMode ? D.allMatchesEver() : D.sortedMatches();
+    var matches = pool.filter(function (m) { return m.a === pid || m.b === pid; });
     var playedIds = {};
     var legsFor = 0, legsAgainst = 0, won = 0, lost = 0;
 
@@ -344,29 +344,71 @@
       var win = mine > theirs;
       legsFor += mine; legsAgainst += theirs;
       if (win) won++; else lost++;
+
+      var legDetails = (m.legs || []).map(function (leg) {
+        var myStat = isA ? leg.aStat : leg.bStat;
+        var oppStat = isA ? leg.bStat : leg.aStat;
+        var g = String(leg.game || "leg").toLowerCase();
+        var isCricket = g === "cricket";
+        return {
+          game: leg.game && leg.game !== "leg" ? leg.game : (isCricket ? "Cricket" : ((D.config.rules && D.config.rules.game1) || "01")),
+          isCricket: isCricket,
+          winner: leg.winner,
+          iWon: leg.winner === pid,
+          myStat: (typeof myStat === "number" && !isNaN(myStat)) ? myStat : null,
+          oppStat: (typeof oppStat === "number" && !isNaN(oppStat)) ? oppStat : null,
+          unit: isCricket ? "MPR" : "PPD"
+        };
+      });
+
+      var round = String(m.round || "").trim().toLowerCase();
+      var isPlayoff = /quarter|qf|semi|sf|final|fn|playoff/.test(round) || /playoff/.test(String(m.competition || "").toLowerCase());
+      var roundLabel = "";
+      if (/final|fn/.test(round)) roundLabel = "Playoff Final";
+      else if (/semi|sf/.test(round)) roundLabel = "Playoff Semi-Final";
+      else if (/quarter|qf/.test(round)) roundLabel = "Playoff Quarter-Final";
+      else if (isPlayoff) roundLabel = "Playoff Match";
+
       return {
         opponent: D.player(oppId),
         win: win,
         mine: mine,
         theirs: theirs,
         date: m.date,
+        competition: m.competition || "",
+        round: round,
+        roundLabel: roundLabel,
+        isPlayoff: isPlayoff,
+        legs: legDetails,
+        rawLegs: m.legs || [],
         isForfeit: !!s.forfeited,
         forfeitedPlayerId: s.forfeited || null,
         isUnplayedForfeit: !!m.isUnplayedForfeit
       };
     });
 
-    // Whoever's left in their group that hasn't been played yet.
-    var upcoming = D.activePlayers()
-      .filter(function (p) { return p.id !== pid && p.group === player.group && !playedIds[p.id]; })
-      .map(function (p) { return { opponent: p }; });
+    var upcoming = [];
+    if (!careerMode) {
+      upcoming = D.activePlayers()
+        .filter(function (p) { return p.id !== pid && p.group === player.group && !playedIds[p.id]; })
+        .map(function (p) { return { opponent: p }; });
+    }
 
     return {
       player: player,
+      isCareer: !!careerMode,
       completed: completed,
       upcoming: upcoming,
       record: { won: won, lost: lost, legsFor: legsFor, legsAgainst: legsAgainst, played: completed.length }
     };
+  };
+
+  D.playerSeasonGlimpse = function (pid) {
+    return D.playerMatches(pid, false);
+  };
+
+  D.playerCareerGlimpse = function (pid) {
+    return D.playerMatches(pid, true);
   };
 
   // Find any already-recorded match between two players this season (regular season).
