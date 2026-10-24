@@ -1319,65 +1319,106 @@
       modal.setAttribute("role", "dialog");
       modal.setAttribute("aria-modal", "true");
 
-      var pA = (data.playerA && data.playerA !== "unknown") ? (D.player(data.playerA) || { name: data.playerA, flag: "" }) : null;
-      var pB = (data.playerB && data.playerB !== "unknown") ? (D.player(data.playerB) || { name: data.playerB, flag: "" }) : null;
+      function renderModalContent() {
+        var pA = (data.playerA && data.playerA !== "unknown") ? (D.player(data.playerA) || { name: data.playerA, flag: "" }) : null;
+        var pB = (data.playerB && data.playerB !== "unknown") ? (D.player(data.playerB) || { name: data.playerB, flag: "" }) : null;
 
-      var playerHeader = "";
-      if (pA && pB) {
-        playerHeader = (pA.flag ? pA.flag + " " : "") + U.esc(pA.name) + ' <span class="muted">vs</span> ' + (pB.flag ? pB.flag + " " : "") + U.esc(pB.name);
-      } else if (pA) {
-        playerHeader = (pA.flag ? pA.flag + " " : "") + U.esc(pA.name) + ' <span class="muted">vs [Unknown opponent - select below]</span>';
-      } else {
-        playerHeader = '<span class="muted">[Select players below in form]</span>';
+        var playerHeader = "";
+        if (pA && pB) {
+          playerHeader = '<span class="scan-player-tag">' + (pA.flag ? pA.flag + " " : "") + U.esc(pA.name) + '</span> ' +
+            '<span class="muted">vs</span> ' +
+            '<span class="scan-player-tag">' + (pB.flag ? pB.flag + " " : "") + U.esc(pB.name) + '</span>' +
+            '<button type="button" class="btn btn-quiet btn-sm scan-swap-btn" id="rf-scan-swap-sides" title="Swap Player A and B">⇄ Swap Sides</button>';
+        } else if (pA) {
+          playerHeader = (pA.flag ? pA.flag + " " : "") + U.esc(pA.name) + ' <span class="muted">vs [Unknown opponent - select below]</span>';
+        } else {
+          playerHeader = '<span class="muted">[Select players below in form]</span>';
+        }
+
+        var legsHtml = (data.legs && data.legs.length)
+          ? data.legs.map(function (l, idx) {
+              var w = (l.winner && l.winner !== "unknown") ? (D.player(l.winner) || { name: l.winner }) : { name: "\u2013" };
+              var canToggle = (data.playerA && data.playerB && data.playerA !== "unknown" && data.playerB !== "unknown");
+              var winnerBtn = canToggle
+                ? '<button type="button" class="scan-winner-toggle" data-leg-idx="' + idx + '" title="Tap to flip winner"><strong class="accent-good">' + U.esc(w.name) + '</strong> <span class="muted tiny">⟳</span></button>'
+                : '<strong class="accent-good">' + U.esc(w.name) + '</strong>';
+
+              return '<tr>' +
+                '<td><strong>Leg ' + (idx + 1) + '</strong> (' + U.esc(l.game || "") + ')</td>' +
+                '<td>' + winnerBtn + '</td>' +
+                '<td class="mono">' + (l.aStat != null ? l.aStat : "\u2013") + ' / ' + (l.bStat != null ? l.bStat : "\u2013") + '</td>' +
+                '</tr>';
+            }).join("")
+          : '<tr><td colspan="3" class="muted">No legs detected</td></tr>';
+
+        var previewsHtml = previewDataUrls.map(function (url) {
+          return '<img src="' + url + '" class="scan-preview-img" alt="Screen photo preview" style="max-height:160px;margin-bottom:8px">';
+        }).join("");
+
+        modal.innerHTML =
+          '<div class="glimpse-backdrop"></div>' +
+          '<div class="glimpse-dialog">' +
+          '  <button type="button" class="glimpse-close" id="rf-scan-close" aria-label="Close">&times;</button>' +
+          '  <h3 style="margin:0 0 4px">Are these results correct?</h3>' +
+          '  <p class="muted tiny" style="margin:0 0 10px">Tap <strong>⇄ Swap Sides</strong> or tap any <strong>Winner ⟳</strong> to flip if needed.</p>' +
+          '  <div style="display:flex;gap:8px;overflow-x:auto">' + previewsHtml + '</div>' +
+          '  <div class="scan-header-wrap" style="font-size:1.05rem;font-weight:600;margin:10px 0 6px;display:flex;align-items:center;flex-wrap:wrap;gap:8px">' + playerHeader + '</div>' +
+          '  <div class="scan-legs-summary">' +
+          '    <table>' +
+          '      <thead><tr><th>Leg / Game</th><th>Winner (Tap to toggle)</th><th>Averages (' + (pA ? U.esc(pA.name) : "P1") + ' / ' + (pB ? U.esc(pB.name) : "P2") + ')</th></tr></thead>' +
+          '      <tbody>' + legsHtml + '</tbody>' +
+          '    </table>' +
+          '  </div>' +
+          '  <div class="btn-row" style="margin-top:16px">' +
+          '    <button type="button" class="btn" id="rf-scan-accept">Looks good! Populate Form</button>' +
+          '    <button type="button" class="btn btn-quiet" id="rf-scan-reject">Cancel / Edit by hand</button>' +
+          '  </div>' +
+          '</div>';
+
+        wireModalEvents();
       }
 
-      var legsHtml = (data.legs && data.legs.length)
-        ? data.legs.map(function (l, idx) {
-            var w = (l.winner && l.winner !== "unknown") ? (D.player(l.winner) || { name: l.winner }) : { name: "\u2013" };
-            return '<tr>' +
-              '<td><strong>Leg ' + (idx + 1) + '</strong> (' + U.esc(l.game || "") + ')</td>' +
-              '<td><strong class="accent-good">' + U.esc(w.name) + '</strong></td>' +
-              '<td class="mono">' + (l.aStat != null ? l.aStat : "\u2013") + ' / ' + (l.bStat != null ? l.bStat : "\u2013") + '</td>' +
-              '</tr>';
-          }).join("")
-        : '<tr><td colspan="3" class="muted">No legs detected</td></tr>';
+      function wireModalEvents() {
+        $("rf-scan-close").addEventListener("click", closeModal);
+        $("rf-scan-reject").addEventListener("click", closeModal);
+        $("rf-scan-accept").addEventListener("click", acceptAndPopulate);
 
-      var previewsHtml = previewDataUrls.map(function (url) {
-        return '<img src="' + url + '" class="scan-preview-img" alt="Screen photo preview" style="max-height:160px;margin-bottom:8px">';
-      }).join("");
+        var swapBtn = $("rf-scan-swap-sides");
+        if (swapBtn) {
+          swapBtn.addEventListener("click", function () {
+            var tmpA = data.playerA;
+            data.playerA = data.playerB;
+            data.playerB = tmpA;
+            (data.legs || []).forEach(function (l) {
+              var tmpStat = l.aStat;
+              l.aStat = l.bStat;
+              l.bStat = tmpStat;
+            });
+            renderModalContent();
+          });
+        }
 
-      modal.innerHTML =
-        '<div class="glimpse-backdrop"></div>' +
-        '<div class="glimpse-dialog">' +
-        '  <button type="button" class="glimpse-close" id="rf-scan-close" aria-label="Close">&times;</button>' +
-        '  <h3 style="margin:0 0 4px">Are these results correct?</h3>' +
-        '  <p class="muted tiny" style="margin:0 0 12px">Check the players, winners, and averages we read from the screen(s).</p>' +
-        '  <div style="display:flex;gap:8px;overflow-x:auto">' + previewsHtml + '</div>' +
-        '  <div style="font-size:1.05rem;font-weight:600;margin:10px 0 6px">' + playerHeader + '</div>' +
-        '  <div class="scan-legs-summary">' +
-        '    <table>' +
-        '      <thead><tr><th>Leg / Game</th><th>Winner</th><th>Averages (' + (pA ? U.esc(pA.name) : "P1") + ' / ' + (pB ? U.esc(pB.name) : "P2") + ')</th></tr></thead>' +
-        '      <tbody>' + legsHtml + '</tbody>' +
-        '    </table>' +
-        '  </div>' +
-        '  <div class="btn-row" style="margin-top:16px">' +
-        '    <button type="button" class="btn" id="rf-scan-accept">Looks good! Populate Form</button>' +
-        '    <button type="button" class="btn btn-quiet" id="rf-scan-reject">Cancel / Edit by hand</button>' +
-        '  </div>' +
-        '</div>';
-
-      document.body.appendChild(modal);
-      document.body.classList.add("lightbox-locked");
+        modal.querySelectorAll(".scan-winner-toggle").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var idx = parseInt(btn.getAttribute("data-leg-idx"), 10);
+            if (isNaN(idx) || !data.legs || !data.legs[idx]) return;
+            var l = data.legs[idx];
+            if (l.winner === data.playerA) {
+              l.winner = data.playerB;
+            } else {
+              l.winner = data.playerA;
+            }
+            renderModalContent();
+          });
+        });
+      }
 
       function closeModal() {
         modal.remove();
         document.body.classList.remove("lightbox-locked");
       }
 
-      $("rf-scan-close").addEventListener("click", closeModal);
-      $("rf-scan-reject").addEventListener("click", closeModal);
-
-      $("rf-scan-accept").addEventListener("click", function () {
+      function acceptAndPopulate() {
         closeModal();
 
         // Populate Player A
@@ -1427,7 +1468,9 @@
         showMsg("ok", "\u2713 Screen data imported into the form! Verify the fields below, enter the league passcode, and submit.");
         var formTop = form.getBoundingClientRect().top + window.pageYOffset - 80;
         window.scrollTo({ top: formTop, behavior: "smooth" });
-      });
+      }
+
+      renderModalContent();
     }
 
     if (scanInput && D.config.resultsForm && D.config.resultsForm.scanUrl) {

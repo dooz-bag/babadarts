@@ -1520,3 +1520,34 @@ body.lightbox-locked { overflow: hidden; }
 .glimpse-stat-pill.leg-won strong {
   color: #7dd38c;
 }
+
+
+/* Screen scanner confirmation modal interactive elements */
+.scan-swap-btn {
+  padding: 3px 10px !important;
+  font-size: 0.8rem !important;
+  border-radius: var(--radius) !important;
+  border-color: rgba(168, 85, 247, 0.4) !important;
+  color: #c084fc !important;
+  background: rgba(168, 85, 247, 0.1) !important;
+}
+.scan-swap-btn:hover {
+  background: rgba(168, 85, 247, 0.2) !important;
+}
+.scan-winner-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(93, 168, 104, 0.4);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s ease;
+}
+.scan-winner-toggle:hover {
+  background: rgba(93, 168, 104, 0.15);
+  border-color: var(--accent-good);
+}
