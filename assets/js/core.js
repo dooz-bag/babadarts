@@ -458,7 +458,9 @@
 
     rows.forEach(function (r, i) {
       r.pos = i + 1;
+      r.totalRounds = totalRounds;
       r.remaining = Math.max(0, totalRounds - r.played);
+      r.isComplete = totalRounds > 0 && r.remaining === 0;
       r.maxWins = r.won + r.remaining;
       r.zone = r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out";
       // Flag ties that the league would have to break another way

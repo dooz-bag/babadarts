@@ -373,6 +373,16 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
 .tag-hunt { color: var(--accent-warm); }
 .tag-out  { color: var(--dim); }
 
+/* Small green check indicator when all league games are completed */
+.played-done {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--accent-good);
+  cursor: help;
+}
+
 /* --------------------------------------------------------- LEADER CARD --- */
 .leader {
   background: var(--panel);

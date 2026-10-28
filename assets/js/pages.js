@@ -47,10 +47,13 @@
     var body = rows.slice(0, limit).map(function (r) {
       // Dashed line under the last bye place and the last playoff place
       var cut = (r.pos === shape.byesPerGroup || r.pos === shape.perGroup) && limit >= r.pos + 1;
+      var playedHtml = r.isComplete
+        ? r.played + ' <span class="played-done" title="All ' + r.totalRounds + ' matches played">\u2713</span>'
+        : String(r.played);
       return '<tr class="zone-' + r.zone + (cut ? ' cutline' : '') + '">' +
         '<td><span class="pos">' + r.pos + '</span></td>' +
         '<td>' + playerCellHtml(r.player, opts.clickable) + '</td>' +
-        '<td class="num">' + r.played + '</td>' +
+        '<td class="num">' + playedHtml + '</td>' +
         '<td class="num"><strong>' + r.won + '</strong></td>' +
         '<td class="num">' + r.lost + '</td>' +
         '<td class="num">' + r.legsFor + '</td>' +

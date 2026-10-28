@@ -78,8 +78,8 @@ DATSU.config = {
       "Head-to-head decider match"
     ],
     playoffFormats: {
-      round1: "Best of 3",
-      quarterFinal: "Best of 3",
+      round1: "Best of 5",
+      quarterFinal: "Best of 5",
       semiFinal: "Best of 5",
       final: "Best of 7"
     }
