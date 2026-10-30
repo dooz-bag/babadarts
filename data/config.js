@@ -91,6 +91,13 @@ DATSU.config = {
      and future regular season matches, while keeping their 01/cricket stats. */
   forfeitedPlayers: ["will"],
 
+  /* ---- Withdrawn players (leave empty [] if none) --------------------
+     Players who withdrew mid-season without forfeits. Unplayed matches
+     are cancelled with no artificial wins/losses given to anyone. Past
+     played stats are preserved, and active players' remaining matches and
+     playoff qualification math automatically adjust to their playable schedule. */
+  withdrawnPlayers: ["david"],
+
   quips: [
     "Nice one.",
     "Excellent grouping, Mr Speaker.",

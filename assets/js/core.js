@@ -81,6 +81,14 @@
     return list.indexOf(id) !== -1;
   };
 
+  D.isPlayerWithdrawn = function (id) {
+    if (!id) return false;
+    var p = D.player(id);
+    if (p && p.withdrawn) return true;
+    var list = (D.config && D.config.withdrawnPlayers) || [];
+    return list.indexOf(id) !== -1;
+  };
+
   // Everyone currently part of the league — i.e. not marked `active: false`.
   // A departed player still keeps their row in data/players.js (so career
   // stats keep their name, flag and avatar forever) but drops out of the
@@ -102,8 +110,12 @@
     return out.sort();
   };
 
+  D.competingPlayers = function () {
+    return D.activePlayers().filter(function (p) { return !D.isPlayerWithdrawn(p.id); });
+  };
+
   D.groupSize = function (group) {
-    return D.activePlayers().filter(function (p) { return p.group === group; }).length;
+    return D.competingPlayers().filter(function (p) { return p.group === group; }).length;
   };
 
   // Everyone plays everyone else in their group once.
@@ -390,7 +402,12 @@
     var upcoming = [];
     if (!careerMode) {
       upcoming = D.activePlayers()
-        .filter(function (p) { return p.id !== pid && p.group === player.group && !playedIds[p.id]; })
+        .filter(function (p) {
+          if (p.id === pid || p.group !== player.group || playedIds[p.id]) return false;
+          // Withdrawn players don't have upcoming matches
+          if (D.isPlayerWithdrawn(p.id) || D.isPlayerWithdrawn(pid)) return false;
+          return true;
+        })
         .map(function (p) { return { opponent: p }; });
     }
 
@@ -432,51 +449,71 @@
     var shape = D.playoffShape();
     var byeSpots = shape.byesPerGroup;
     var playoffSpots = shape.perGroup;
-    var rows = D.activePlayers()
-      .filter(function (p) { return p.group === group; })
-      .map(function (p) {
-        var s = D.statsFor(p.id);
-        return {
-          player: p, stats: s,
-          played: s.played, won: s.won, lost: s.lost,
-          legsFor: s.legsFor, legsAgainst: s.legsAgainst,
-          legDiff: s.legsFor - s.legsAgainst,
-          ppd: s.ppd, mpr: s.mpr
-        };
-      });
+    var groupPlayers = D.activePlayers().filter(function (p) { return p.group === group; });
+
+    var rows = groupPlayers.map(function (p) {
+      var s = D.statsFor(p.id);
+      var isWithdrawn = D.isPlayerWithdrawn(p.id);
+      return {
+        player: p, stats: s,
+        isWithdrawn: isWithdrawn,
+        played: s.played, won: s.won, lost: s.lost,
+        legsFor: s.legsFor, legsAgainst: s.legsAgainst,
+        legDiff: s.legsFor - s.legsAgainst,
+        ppd: s.ppd, mpr: s.mpr
+      };
+    });
 
     rows.sort(function (x, y) {
+      // Withdrawn players stay at the bottom of the table
+      if (x.isWithdrawn && !y.isWithdrawn) return 1;
+      if (!x.isWithdrawn && y.isWithdrawn) return -1;
       if (y.won !== x.won) return y.won - x.won;
       if (y.legDiff !== x.legDiff) return y.legDiff - x.legDiff;
       if (y.legsFor !== x.legsFor) return y.legsFor - x.legsFor;
       return (y.ppd || 0) - (x.ppd || 0);
     });
 
-    // Matches per player comes from the size of the group itself, so adding
-    // or dropping a player is handled automatically.
-    var totalRounds = Math.max(0, rows.length - 1);
-
+    // Calculate playable remaining matches for each player.
+    // An opponent is playable if they are in the same group, active, not withdrawn, and not yet played.
     rows.forEach(function (r, i) {
       r.pos = i + 1;
-      r.totalRounds = totalRounds;
-      r.remaining = Math.max(0, totalRounds - r.played);
-      r.isComplete = totalRounds > 0 && r.remaining === 0;
+
+      var playableOpponents = groupPlayers.filter(function (p) {
+        return p.id !== r.player.id && !D.isPlayerWithdrawn(p.id);
+      });
+
+      var unplayedPlayable = playableOpponents.filter(function (opp) {
+        return !D.findSeasonMatch(r.player.id, opp.id);
+      }).length;
+
+      var playedMatches = r.played;
+      r.remaining = r.isWithdrawn ? 0 : unplayedPlayable;
+      r.totalRounds = r.isWithdrawn ? playedMatches : (playedMatches + unplayedPlayable);
+      r.isComplete = r.isWithdrawn ? true : (r.remaining === 0 && r.totalRounds > 0);
       r.maxWins = r.won + r.remaining;
-      r.zone = r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out";
+      r.zone = r.isWithdrawn ? "out" : (r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out");
+
       // Flag ties that the league would have to break another way
       r.tied = rows.some(function (o) {
-        return o !== r && o.won === r.won && o.legDiff === r.legDiff;
+        return o !== r && !o.isWithdrawn && !r.isWithdrawn && o.won === r.won && o.legDiff === r.legDiff;
       });
     });
 
     // Playoff outlook.
-    //   couldOutrankMe        - rivals who might still finish above me
-    //   definitelyAboveMe     - rivals I can no longer catch
-    // Players level on wins are separated by their current table position,
-    // otherwise someone sitting 7th would be told they were safe.
+    //   couldOutrankMe        - active rivals who might still finish above me
+    //   definitelyAboveMe     - active rivals I can no longer catch
+    // Withdrawn players are automatically marked eliminated ("out") and
+    // do not consume qualification spots or compete with active contenders.
+    var competingRows = rows.filter(function (r) { return !r.isWithdrawn; });
+
     rows.forEach(function (r) {
+      if (r.isWithdrawn) {
+        r.outlook = "out";
+        return;
+      }
       var couldOutrankMe = 0, definitelyAboveMe = 0;
-      rows.forEach(function (o) {
+      competingRows.forEach(function (o) {
         if (o === r) return;
         if (o.maxWins > r.won || (o.maxWins === r.won && o.pos < r.pos)) couldOutrankMe++;
         if (o.won > r.maxWins || (o.won === r.maxWins && o.pos < r.pos)) definitelyAboveMe++;
@@ -923,7 +960,11 @@
         if (!pl.length || !mt.length) throw new Error("Sheet looks empty");
 
         var localForfeited = {};
-        (D.players || []).forEach(function (p) { if (p.forfeited) localForfeited[p.id] = true; });
+        var localWithdrawn = {};
+        (D.players || []).forEach(function (p) {
+          if (p.forfeited) localForfeited[p.id] = true;
+          if (p.withdrawn) localWithdrawn[p.id] = true;
+        });
 
         D.players = pl.map(function (r) {
           var isForfeit = false;
@@ -934,11 +975,20 @@
           } else if (localForfeited[r.id]) {
             isForfeit = true;
           }
+
+          var isWithdrawn = false;
+          if (r.withdrawn !== undefined && r.withdrawn !== null && String(r.withdrawn).trim() !== "") {
+            isWithdrawn = parseBool(r.withdrawn, false);
+          } else if (localWithdrawn[r.id]) {
+            isWithdrawn = true;
+          }
+
           return {
             id: r.id, name: r.name || r.id, dartslive: r.dartslive || "",
             country: r.country || "", flag: r.flag || "", group: (r.group || "A").toUpperCase(),
             avatar: r.avatar || "", active: parseBool(r.active, true),
             forfeited: isForfeit,
+            withdrawn: isWithdrawn,
             notes: (r.notes || "").split("|").map(function (x) { return x.trim(); }).filter(Boolean)
           };
         }).filter(function (p) { return p.id; });

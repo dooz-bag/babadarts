@@ -18,6 +18,10 @@
                keeping their 01 and cricket stats intact. They stay
                at the bottom of the table without qualifying.
 
+   withdrawn   true = player has withdrawn from the league without forfeits.
+               Unplayed matches are cancelled without assigning wins/losses,
+               while keeping their stats from played matches intact.
+
    active      true = currently in the league. Set to false when someone
                leaves instead of deleting their line — that keeps their
                name, flag and avatar attached to their career stats
