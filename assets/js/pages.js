@@ -409,7 +409,7 @@
     var buckets = { bye: [], in: [], hunt: [], out: [] };
     shape.groups.forEach(function (g) {
       D.standings(g).forEach(function (r) {
-        if (!r.isWithdrawn) {
+        if (!r.isWithdrawn && !r.isForfeited) {
           buckets[r.outlook].push({ row: r, group: g });
         }
       });

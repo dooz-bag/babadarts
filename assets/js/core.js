@@ -111,7 +111,7 @@
   };
 
   D.competingPlayers = function () {
-    return D.activePlayers().filter(function (p) { return !D.isPlayerWithdrawn(p.id); });
+    return D.activePlayers().filter(function (p) { return !D.isPlayerWithdrawn(p.id) && !D.isPlayerForfeited(p.id); });
   };
 
   D.groupSize = function (group) {
@@ -454,9 +454,11 @@
     var rows = groupPlayers.map(function (p) {
       var s = D.statsFor(p.id);
       var isWithdrawn = D.isPlayerWithdrawn(p.id);
+      var isForfeited = D.isPlayerForfeited(p.id);
       return {
         player: p, stats: s,
         isWithdrawn: isWithdrawn,
+        isForfeited: isForfeited,
         played: s.played, won: s.won, lost: s.lost,
         legsFor: s.legsFor, legsAgainst: s.legsAgainst,
         legDiff: s.legsFor - s.legsAgainst,
@@ -465,9 +467,11 @@
     });
 
     rows.sort(function (x, y) {
-      // Withdrawn players stay at the bottom of the table
-      if (x.isWithdrawn && !y.isWithdrawn) return 1;
-      if (!x.isWithdrawn && y.isWithdrawn) return -1;
+      // Withdrawn and forfeited players stay at the bottom of the table
+      var bottomX = x.isWithdrawn || x.isForfeited;
+      var bottomY = y.isWithdrawn || y.isForfeited;
+      if (bottomX && !bottomY) return 1;
+      if (!bottomX && bottomY) return -1;
       if (y.won !== x.won) return y.won - x.won;
       if (y.legDiff !== x.legDiff) return y.legDiff - x.legDiff;
       if (y.legsFor !== x.legsFor) return y.legsFor - x.legsFor;
@@ -478,6 +482,7 @@
     // An opponent is playable if they are in the same group, active, not withdrawn, and not yet played.
     rows.forEach(function (r, i) {
       r.pos = i + 1;
+      r.isForfeited = D.isPlayerForfeited(r.player.id);
 
       var playableOpponents = groupPlayers.filter(function (p) {
         return p.id !== r.player.id && !D.isPlayerWithdrawn(p.id);
@@ -488,27 +493,27 @@
       }).length;
 
       var playedMatches = r.played;
-      r.remaining = r.isWithdrawn ? 0 : unplayedPlayable;
+      r.remaining = (r.isWithdrawn || r.isForfeited) ? 0 : unplayedPlayable;
       r.totalRounds = r.isWithdrawn ? playedMatches : (playedMatches + unplayedPlayable);
-      r.isComplete = r.isWithdrawn ? true : (r.remaining === 0 && r.totalRounds > 0);
+      r.isComplete = (r.isWithdrawn || r.isForfeited) ? true : (r.remaining === 0 && r.totalRounds > 0);
       r.maxWins = r.won + r.remaining;
-      r.zone = r.isWithdrawn ? "out" : (r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out");
+      r.zone = (r.isWithdrawn || r.isForfeited) ? "out" : (r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out");
 
       // Flag ties that the league would have to break another way
       r.tied = rows.some(function (o) {
-        return o !== r && !o.isWithdrawn && !r.isWithdrawn && o.won === r.won && o.legDiff === r.legDiff;
+        return o !== r && !o.isWithdrawn && !r.isWithdrawn && !o.isForfeited && !r.isForfeited && o.won === r.won && o.legDiff === r.legDiff;
       });
     });
 
     // Playoff outlook.
     //   couldOutrankMe        - active rivals who might still finish above me
     //   definitelyAboveMe     - active rivals I can no longer catch
-    // Withdrawn players are automatically marked eliminated ("out") and
+    // Withdrawn and forfeited players are automatically marked eliminated ("out") and
     // do not consume qualification spots or compete with active contenders.
-    var competingRows = rows.filter(function (r) { return !r.isWithdrawn; });
+    var competingRows = rows.filter(function (r) { return !r.isWithdrawn && !r.isForfeited; });
 
     rows.forEach(function (r) {
-      if (r.isWithdrawn) {
+      if (r.isWithdrawn || r.isForfeited) {
         r.outlook = "out";
         return;
       }
