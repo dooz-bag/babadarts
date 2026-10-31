@@ -404,8 +404,9 @@
       upcoming = D.activePlayers()
         .filter(function (p) {
           if (p.id === pid || p.group !== player.group || playedIds[p.id]) return false;
-          // Withdrawn players don't have upcoming matches
+          // Withdrawn or forfeited players don't have upcoming playable matches
           if (D.isPlayerWithdrawn(p.id) || D.isPlayerWithdrawn(pid)) return false;
+          if (D.isPlayerForfeited(p.id) || D.isPlayerForfeited(pid)) return false;
           return true;
         })
         .map(function (p) { return { opponent: p }; });
@@ -479,13 +480,13 @@
     });
 
     // Calculate playable remaining matches for each player.
-    // An opponent is playable if they are in the same group, active, not withdrawn, and not yet played.
+    // An opponent is playable if they are in the same group, active, not withdrawn, not forfeited, and not yet played.
     rows.forEach(function (r, i) {
       r.pos = i + 1;
       r.isForfeited = D.isPlayerForfeited(r.player.id);
 
       var playableOpponents = groupPlayers.filter(function (p) {
-        return p.id !== r.player.id && !D.isPlayerWithdrawn(p.id);
+        return p.id !== r.player.id && !D.isPlayerWithdrawn(p.id) && !D.isPlayerForfeited(p.id);
       });
 
       var unplayedPlayable = playableOpponents.filter(function (opp) {
@@ -494,7 +495,7 @@
 
       var playedMatches = r.played;
       r.remaining = (r.isWithdrawn || r.isForfeited) ? 0 : unplayedPlayable;
-      r.totalRounds = r.isWithdrawn ? playedMatches : (playedMatches + unplayedPlayable);
+      r.totalRounds = playedMatches + r.remaining;
       r.isComplete = (r.isWithdrawn || r.isForfeited) ? true : (r.remaining === 0 && r.totalRounds > 0);
       r.maxWins = r.won + r.remaining;
       r.zone = (r.isWithdrawn || r.isForfeited) ? "out" : (r.pos <= byeSpots ? "bye" : r.pos <= playoffSpots ? "playoff" : "out");
