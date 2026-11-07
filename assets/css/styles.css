@@ -265,9 +265,19 @@ a.card:hover { border-color: var(--line-2); background: var(--panel-2); text-dec
   border-color: var(--accent-warm);
   box-shadow: 0 0 0 1px rgba(201, 154, 68, 0.35), 0 0 24px -4px var(--accent-warm);
 }
+.status-badge.is-playoffs {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 1px rgba(214, 177, 58, 0.35), 0 0 24px -4px var(--accent-gold);
+}
+.status-badge.is-tournament {
+  border-color: var(--accent-violet);
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.4), 0 0 26px -4px var(--accent-violet);
+}
 .status-badge .status-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
 .status-badge.is-on .status-dot { background: var(--accent-good); box-shadow: 0 0 10px var(--accent-good); }
 .status-badge.is-off .status-dot { background: var(--accent-warm); box-shadow: 0 0 10px var(--accent-warm); }
+.status-badge.is-playoffs .status-dot { background: var(--accent-gold); box-shadow: 0 0 10px var(--accent-gold); }
+.status-badge.is-tournament .status-dot { background: var(--accent-violet); box-shadow: 0 0 10px var(--accent-violet); }
 .status-badge .status-text strong {
   display: block;
   font-family: var(--font-head);
@@ -438,6 +448,141 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
     0 0 0 1px rgba(255, 255, 255, 0.05) inset,
     0 0 22px -2px var(--glow, var(--accent)),
     0 0 56px -6px var(--glow, var(--accent));
+}
+
+/* ------------------------------------------------------ AWARD CARDS ---
+   Season superlatives. Same visual family as the leader cards, but with
+   room for a one-line explanation of why the award exists, because half
+   the fun is the joke.                                                 */
+.award-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.award-card.tint-accent        { border-left-color: var(--accent); }
+.award-card.tint-accent-cool   { border-left-color: var(--accent-cool); }
+.award-card.tint-accent-warm   { border-left-color: var(--accent-warm); }
+.award-card.tint-accent-good   { border-left-color: var(--accent-good); }
+.award-card.tint-accent-gold   { border-left-color: var(--accent-gold); }
+.award-card.tint-accent-plum   { border-left-color: var(--accent-plum); }
+.award-card.tint-accent-violet { border-left-color: var(--accent-violet); }
+
+.award-head { display: flex; align-items: center; gap: 9px; }
+.award-icon { font-size: 1.15rem; line-height: 1; }
+.award-name {
+  font-family: var(--font-head);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.award-blurb {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--dim);
+  line-height: 1.45;
+}
+.award-winner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.award-who { font-size: 1.02rem; font-weight: 600; }
+.award-value {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  color: var(--accent-cool);
+  white-space: nowrap;
+}
+.award-detail { margin: 0; font-size: 0.8rem; color: var(--dim); }
+.award-empty { margin: 4px 0 0; font-size: 0.86rem; color: var(--dim); font-style: italic; }
+
+/* ------------------------------------------------- SEGMENTED CONTROL ---
+   Used on the submit form to pick league / playoff / tournament. A row of
+   buttons that reads as one control, so it's obvious they're exclusive. */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.segmented-btn {
+  font-family: var(--font-head);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.segmented-btn:hover { color: var(--text); background: var(--panel-2); }
+.segmented-btn.is-active {
+  background: var(--panel);
+  border-color: var(--line-2);
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+
+/* --------------------------------------------------------- ADMIN PAGE ---
+   A once-a-season tool, so it's allowed to look like one: dense tables,
+   monospace blocks, and a clear red edge on anything that needs fixing. */
+.admin-table { min-width: 0; }
+.admin-table tr.row-bad td { background: rgba(201, 154, 68, 0.07); }
+.admin-table tr.row-bad td:first-child { box-shadow: inset 3px 0 0 var(--accent-warm); }
+/* The match column carries the leg summary underneath the two names, so the
+   Check column stays on screen — it's the one column you actually need. */
+.admin-table td:nth-child(4) { white-space: normal; min-width: 200px; }
+.admin-table td:nth-child(5) { white-space: normal; min-width: 130px; font-size: 0.82rem; }
+.admin-legs { font-size: 0.76rem; color: var(--dim); margin-top: 2px; }
+
+.admin-code {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+.admin-code:focus { outline: 1px solid var(--accent-cool); }
+
+.admin-seeds {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  columns: 2;
+  column-gap: 28px;
+}
+.admin-seeds li { margin-bottom: 4px; break-inside: avoid; }
+.admin-seeds strong { color: var(--text); font-family: var(--font-mono); font-size: 0.82rem; }
+
+@media (max-width: 640px) {
+  .admin-seeds { columns: 1; }
 }
 
 /* ---------------------------------------------------- HONOUR BADGES ---
@@ -702,6 +847,10 @@ a.honour-badge.league:hover {
 .tie-bye { border-style: dashed; background: transparent; }
 .tie-bye .side { color: var(--muted); }
 .bracket-cell.is-empty .tie { visibility: hidden; }
+/* A tie that has actually been played gets a slightly brighter edge, so a
+   half-finished bracket reads at a glance. */
+.tie.is-played { border-color: var(--line-2); }
+.tie.is-played .fmt { color: var(--muted); }
 
 /* ------------------------------------------------------------- GALLERY --- */
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }

@@ -109,18 +109,62 @@ do not need to edit the bracket anywhere.
 
 ## 3. Updating the league status on the front page
 
-Open `data/config.js` and edit the `status` block. There are only two things
-in it:
+Open `data/config.js` and edit the `status` block. There are two independent
+switches in it, because a league season and a one-day tournament are different
+things:
 
 ```js
 status: {
   running: true,             // true = green badge, false = amber badge
-  seasonName: "Fall 2026 League"
+  seasonName: "Fall 2026 League",
+  seasonId: "2026-fall",     // the archive id this season rolls over into
+
+  phase: "league",           // "league" | "playoffs"
+  tournamentMode: false      // true = show the tournament instead
 }
 ```
 
+- **`phase`** is where the *league* is up to. Leave it as `"league"` while
+  matches are being played. Set it to `"playoffs"` once you've finalized the
+  bracket (section 6) and the Playoffs page becomes "The Bracket" with real
+  results in it.
+- **`tournamentMode`** is a separate overlay for a one-day event. Flip it to
+  `true` for the few days a tournament runs, then back to `false`. It works on
+  top of either phase, so running a tournament mid-league never disturbs the
+  league's own state.
+
 That's the whole status board. When `running` is `false` the badge just says
 the league isn't on at the moment — no dates, no countdowns to keep updated.
+
+### Tournament mode
+
+While `tournamentMode` is `true`, fill in the `tournament` block just below it:
+
+```js
+tournament: {
+  name: "World Cup of Darts 2026",
+  dates: "7 Nov 2026",
+  format: "Single elimination · best of 5",
+  archiveId: "2026-world-cup",   // must match an entry in data/archive.js
+  entrants: [],                  // blank = every active player
+  submitResults: false           // true = offer "Tournament match" on the form
+}
+```
+
+`archiveId` is what the results get tagged with, so it has to match the `id` of
+the tournament's entry in `data/archive.js`. If the entry doesn't exist yet, add
+one — `admin.html` can generate it for you.
+
+`submitResults` is **off by default**. A one-day tournament often isn't run off
+the site, so the Submit Result page doesn't offer a tournament option unless you
+turn this on. Leave it off and type the results into the `History` tab
+afterwards; the bracket and archive page pick them up either way. Playoff
+submission is always available regardless of this setting.
+
+With `tournamentMode` on, the hero, status badge, menu, home page and bracket
+page all switch to tournament framing. Everything else (league table, stats,
+players, archive) is untouched, and flipping it off puts the site straight back.
+
 
 ### Adding your LINE details
 
@@ -141,8 +185,12 @@ the bar instead.
 
 ## 4. Archiving a finished season
 
-When a league finishes, add a new block to `data/archive.js`. Copy the whole
-`2024-autumn` block, paste it above, and change the details. The moment you save:
+The quick way is `admin.html` — it moves every row from `Matches` into
+`History` in one go, tagged with the season id, and generates the archive entry
+for you. See [docs/SUBMIT-RESULTS.md](SUBMIT-RESULTS.md#rolling-a-season-over).
+
+If you'd rather do it by hand, add a new block to `data/archive.js`. Copy the
+whole `2024-autumn` block, paste it above, and change the details. The moment you save:
 
 - it appears on the Archive page
 - it gets its own page at `season.html?s=your-new-id`
@@ -155,6 +203,38 @@ Then reset `data/matches.js` for the new season — delete the old match lines
 **Before you delete them, copy those match lines into `data/history.js`
 instead of just deleting them** — that's what keeps career averages accurate.
 See the next section.
+
+## 4a. Season awards
+
+The League Table page has a **Season awards** section, and every archived
+season gets the same one automatically. Nothing to fill in — they're worked out
+from the results:
+
+| Award | What it measures |
+| --- | --- |
+| Unlucky | A good 01 average, a bad league position |
+| Dominance | Fewest defeats |
+| Heartbreak | Most 1–2 losses |
+| Clutch | Best record in deciding legs |
+| Bottler | Worst record in deciding legs |
+| Metronome | Smallest spread of 01 averages |
+| Rollercoaster | Largest spread of 01 averages |
+| Most Improved | Biggest rise between the first and second half of the season |
+| Fader | Biggest drop over the same split |
+| Giant Killer | Most wins over players above them in the table |
+| Specialist | Biggest gap between their 01 and cricket strength |
+
+Two settings control them, in `data/config.js`:
+
+```js
+awards: {
+  minGames: 4     // matches needed to qualify for an award
+}
+```
+
+Forfeited and withdrawn players are excluded automatically — otherwise a 0–2
+forfeit would win "Most Improved".
+
 
 ## 4b. Backfilling old results (Career averages)
 
@@ -194,6 +274,37 @@ to type them in one by one. Two options:
 Either way, save and refresh — no other page changes. The current league
 table, this season's stats and the playoff bracket are completely unaffected;
 only the Career averages section on the Stats page grows.
+
+## 4c. Finalizing the playoff bracket
+
+While the league is running, the Playoffs page shows a *projection* — the
+bracket as if the season ended today. That's useful right up until the moment
+you announce the real seeds, at which point a late result quietly moving them
+would be embarrassing.
+
+To freeze it:
+
+1. Open `admin.html`.
+2. Check the seed list in the **Finalize the bracket** panel.
+3. Copy the generated `data/playoffs.js` block into that file.
+4. Set `phase: "playoffs"` in `data/config.js`.
+
+From then on the bracket is fixed, and the Playoffs page becomes **The
+Bracket**: real seeds, real scores, winners highlighted, and a "Road to the
+final" list of results.
+
+### Logging playoff results
+
+Same form as a league match — go to **Submit Result**, pick **Playoff match**
+at the top, choose the round, and enter the score and averages as normal.
+
+The number of leg fields follows the round's format from
+`rules.playoffFormats` in `data/config.js`. A round set to `"Best of 7"` gives
+you seven leg fields and needs four legs to win; `"Best of 5"` gives five and
+needs three. So a long final just works, without touching any code.
+
+Those rows go into the `History` tab tagged with the season id and the round,
+so they never touch the league table. The bracket picks them up automatically.
 
 ## 5. Adding photos
 

@@ -594,6 +594,344 @@
     return D.leadersFrom(D.allCareerStats(), minGames !== undefined ? minGames : 5);
   };
 
+  /* ------------------------------------------------------------- awards --- */
+
+  /* Season superlatives, worked out from any list of matches. The same
+     function powers the current season and every archived competition, so
+     an old season gets the same awards without anything being written down.
+
+     Returns an array of:
+       { key, title, blurb, winner: { player, value, display, detail } | null }
+
+     `winner` is null when nobody qualifies (e.g. no deciders played yet), so
+     the page can show a friendly "not enough matches" card instead. */
+  D.awards = function (matches, opts) {
+    opts = opts || {};
+    var cfg = (D.config && D.config.awards) || {};
+    var minGames = opts.minGames !== undefined ? opts.minGames
+      : (cfg.minGames !== undefined ? cfg.minGames : 4);
+    var excludeInactive = opts.excludeInactive !== false;
+
+    var list = (matches || []).filter(function (m) {
+      return m && m.a && m.b && !m.isUnplayedForfeit;
+    });
+
+    function skip(pid) {
+      if (!excludeInactive) return false;
+      return D.isPlayerForfeited(pid) || D.isPlayerWithdrawn(pid);
+    }
+
+    /* --- pass 1: raw totals ------------------------------------------- */
+    var acc = {};
+    function get(pid) {
+      if (!acc[pid]) {
+        acc[pid] = {
+          id: pid, played: 0, won: 0, lost: 0,
+          legsFor: 0, legsAgainst: 0,
+          ppd: [], mpr: [], ppdSeries: [],
+          deciders: 0, deciderWins: 0,
+          closeLosses: 0, straightLosses: 0,
+          winsOverHigher: 0
+        };
+      }
+      return acc[pid];
+    }
+
+    list.forEach(function (m) {
+      if (skip(m.a) || skip(m.b)) return;
+      var A = get(m.a), B = get(m.b);
+      var s = D.legScore(m);
+      var aWin = s.a > s.b, bWin = s.b > s.a;
+
+      A.played++; B.played++;
+      A.legsFor += s.a; A.legsAgainst += s.b;
+      B.legsFor += s.b; B.legsAgainst += s.a;
+      if (aWin) { A.won++; B.lost++; } else if (bWin) { B.won++; A.lost++; }
+
+      if ((m.legs || []).length === 3) {
+        A.deciders++; B.deciders++;
+        if (aWin) A.deciderWins++; else if (bWin) B.deciderWins++;
+      }
+      if (bWin && s.a === 1) A.closeLosses++;
+      if (aWin && s.b === 1) B.closeLosses++;
+      if (bWin && s.a === 0) A.straightLosses++;
+      if (aWin && s.b === 0) B.straightLosses++;
+
+      (m.legs || []).forEach(function (leg) {
+        var isCricket = String(leg.game).toLowerCase() === "cricket";
+        if (typeof leg.aStat === "number" && !isNaN(leg.aStat)) {
+          if (isCricket) A.mpr.push(leg.aStat);
+          else { A.ppd.push(leg.aStat); A.ppdSeries.push({ v: leg.aStat, date: m.date || "" }); }
+        }
+        if (typeof leg.bStat === "number" && !isNaN(leg.bStat)) {
+          if (isCricket) B.mpr.push(leg.bStat);
+          else { B.ppd.push(leg.bStat); B.ppdSeries.push({ v: leg.bStat, date: m.date || "" }); }
+        }
+      });
+    });
+
+    function avg(a) {
+      if (!a.length) return null;
+      var t = 0;
+      for (var i = 0; i < a.length; i++) t += a[i];
+      return t / a.length;
+    }
+    function sd(a) {
+      if (a.length < 2) return null;
+      var m = avg(a), t = 0;
+      for (var i = 0; i < a.length; i++) t += (a[i] - m) * (a[i] - m);
+      return Math.sqrt(t / a.length);
+    }
+
+    var rows = Object.keys(acc).map(function (id) {
+      var p = acc[id];
+      p.ppdAvg = avg(p.ppd);
+      p.mprAvg = avg(p.mpr);
+      p.ppdSd = sd(p.ppd);
+      p.winPct = p.played ? (p.won / p.played) * 100 : null;
+      p.legDiff = p.legsFor - p.legsAgainst;
+      p.deciderPct = p.deciders ? (p.deciderWins / p.deciders) * 100 : null;
+      p.index01 = p.ppdAvg === null ? null : (p.ppdAvg / 60) * 100;
+      p.indexCricket = p.mprAvg === null ? null : (p.mprAvg / 2.5) * 100;
+      p.specialistGap = (p.index01 !== null && p.indexCricket !== null)
+        ? p.indexCricket - p.index01 : null;
+
+      // First half vs second half of the season, in date order, for the
+      // improvement / fade awards.
+      var series = p.ppdSeries.slice().sort(function (x, y) {
+        return x.date < y.date ? -1 : x.date > y.date ? 1 : 0;
+      });
+      if (series.length >= 6) {
+        var half = Math.floor(series.length / 2);
+        var first = avg(series.slice(0, half).map(function (x) { return x.v; }));
+        var second = avg(series.slice(half).map(function (x) { return x.v; }));
+        p.trend = second - first;
+        p.trendFirst = first;
+        p.trendSecond = second;
+      } else {
+        p.trend = null;
+      }
+      return p;
+    });
+
+    /* --- pass 2: table position and 01-average rank -------------------- */
+    var table = rows.slice().sort(function (x, y) {
+      if (y.won !== x.won) return y.won - x.won;
+      if (y.legDiff !== x.legDiff) return y.legDiff - x.legDiff;
+      if (y.legsFor !== x.legsFor) return y.legsFor - x.legsFor;
+      return (y.ppdAvg || 0) - (x.ppdAvg || 0);
+    });
+    table.forEach(function (p, i) { p.tablePos = i + 1; });
+
+    var byPpd = rows.filter(function (p) { return p.ppdAvg !== null; })
+      .sort(function (x, y) { return y.ppdAvg - x.ppdAvg; });
+    byPpd.forEach(function (p, i) { p.ppdRank = i + 1; });
+
+    /* --- pass 3: wins over higher-placed opponents --------------------- */
+    list.forEach(function (m) {
+      if (skip(m.a) || skip(m.b)) return;
+      var s = D.legScore(m);
+      var A = acc[m.a], B = acc[m.b];
+      if (!A || !B) return;
+      if (s.a > s.b && A.tablePos > B.tablePos) A.winsOverHigher++;
+      if (s.b > s.a && B.tablePos > A.tablePos) B.winsOverHigher++;
+    });
+
+    /* --- pass 4: pick the winners -------------------------------------- */
+    var eligible = rows.filter(function (p) { return p.played >= minGames; });
+
+    function ordinal(n) {
+      var s = ["th", "st", "nd", "rd"], v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    /* dir "max" picks the highest score, "min" the lowest. Ties are broken
+       by whatever the score function already encodes. */
+    function pick(key, title, blurb, pool, score, format, detail, dir) {
+      var best = null;
+      pool.forEach(function (p) {
+        var v = score(p);
+        if (v === null || v === undefined || isNaN(v)) return;
+        if (!best || (dir === "min" ? v < best.v : v > best.v)) best = { v: v, p: p };
+      });
+      return {
+        key: key, title: title, blurb: blurb,
+        winner: best ? {
+          player: D.player(best.p.id),
+          value: best.v,
+          display: format(best.v, best.p),
+          detail: detail ? detail(best.p) : ""
+        } : null
+      };
+    }
+
+    var withPpd = eligible.filter(function (p) { return p.ppdAvg !== null; });
+    var withDeciders = eligible.filter(function (p) { return p.deciders >= 3; });
+    var withSpread = eligible.filter(function (p) { return p.ppdSd !== null && p.ppd.length >= 6; });
+    var withTrend = eligible.filter(function (p) { return p.trend !== null; });
+    var withBoth = eligible.filter(function (p) { return p.specialistGap !== null; });
+
+    return [
+      pick("unlucky", "Unlucky",
+        "A good average, a bad record. The table is lying to them.",
+        withPpd,
+        function (p) { return p.tablePos - p.ppdRank; },
+        function (v, p) { return D.util.num(p.ppdAvg) + " avg"; },
+        function (p) {
+          return ordinal(p.ppdRank) + " best average, " + ordinal(p.tablePos) + " in the table";
+        }),
+
+      pick("dominance", "Dominance",
+        "Fewest defeats of anyone. Barely worth turning up against.",
+        eligible,
+        function (p) { return -p.lost * 1000 + (p.winPct || 0); },
+        function (v, p) { return p.won + "\u2013" + p.lost; },
+        function (p) { return D.util.num(p.winPct, 0) + "% win rate"; }),
+
+      pick("heartbreak", "Heartbreak",
+        "Lost on the deciding leg more than anyone. So close, so often.",
+        eligible,
+        function (p) { return p.closeLosses; },
+        function (v) { return v + (v === 1 ? " one-leg loss" : " one-leg losses"); },
+        function (p) { return "of " + p.lost + " defeats"; }),
+
+      pick("clutch", "Clutch",
+        "When it goes to a decider, they find another gear.",
+        withDeciders,
+        function (p) { return p.deciderPct * 1000 + p.deciders; },
+        function (v, p) { return p.deciderWins + "/" + p.deciders; },
+        function (p) { return D.util.num(p.deciderPct, 0) + "% of deciders won"; }),
+
+      pick("bottler", "Bottler",
+        "The decider is where their evening tends to end.",
+        withDeciders,
+        function (p) { return p.deciderPct * 1000 - p.deciders; },
+        function (v, p) { return p.deciderWins + "/" + p.deciders; },
+        function (p) { return D.util.num(p.deciderPct, 0) + "% of deciders won"; },
+        "min"),
+
+      pick("metronome", "Metronome",
+        "Same number, every single leg. Deeply unsettling.",
+        withSpread,
+        function (p) { return p.ppdSd; },
+        function (v) { return "\u00b1" + D.util.num(v); },
+        function (p) { return "PPD spread over " + p.ppd.length + " legs"; },
+        "min"),
+
+      pick("rollercoaster", "Rollercoaster",
+        "World-beater one leg, world-beaten the next.",
+        withSpread,
+        function (p) { return p.ppdSd; },
+        function (v) { return "\u00b1" + D.util.num(v); },
+        function (p) { return "PPD spread over " + p.ppd.length + " legs"; }),
+
+      pick("improved", "Most Improved",
+        "Started the season badly and finished it properly.",
+        withTrend,
+        function (p) { return p.trend; },
+        function (v) { return (v > 0 ? "+" : "") + D.util.num(v); },
+        function (p) {
+          return D.util.num(p.trendFirst) + " \u2192 " + D.util.num(p.trendSecond) + " PPD";
+        }),
+
+      pick("fader", "Fader",
+        "Peaked in September. It is not September.",
+        withTrend,
+        function (p) { return p.trend; },
+        function (v) { return (v > 0 ? "+" : "") + D.util.num(v); },
+        function (p) {
+          return D.util.num(p.trendFirst) + " \u2192 " + D.util.num(p.trendSecond) + " PPD";
+        },
+        "min"),
+
+      pick("giant-killer", "Giant Killer",
+        "Beats the people above them and loses to the people below.",
+        eligible,
+        function (p) { return p.winsOverHigher; },
+        function (v) { return v + (v === 1 ? " scalp" : " scalps"); },
+        function (p) { return "wins over higher-placed players"; }),
+
+      pick("specialist", "Specialist",
+        "One game is carrying the other.",
+        withBoth,
+        function (p) { return Math.abs(p.specialistGap); },
+        function (v, p) {
+          return p.specialistGap > 0 ? "Cricket" : "01";
+        },
+        function (p) {
+          var gap = Math.abs(p.specialistGap);
+          return D.util.num(gap, 0) + " index points better at " +
+            (p.specialistGap > 0 ? "cricket" : "01");
+        })
+    ];
+  };
+
+  // This season's awards, from the live match list.
+  D.seasonAwards = function () {
+    return D.awards(D.sortedMatches());
+  };
+
+  // Awards for a past competition, from its History rows. Regular-season
+  // matches only, so a playoff run doesn't skew the "most improved" split.
+  D.awardsForSeason = function (compId) {
+    var all = D.archiveMatches(compId);
+    if (!all.length) return [];
+    var regular = all.filter(function (m) { return !m.round; });
+    return D.awards(regular.length ? regular : all, { excludeInactive: false });
+  };
+
+  /* -------------------------------------------------------------- phase --- */
+
+  /* Where the league is up to: "league" while matches are being played,
+     "playoffs" once the bracket is finalized. `playoffsStarted` is the old
+     name for the same thing, so it still works if it's the only one set. */
+  D.phase = function () {
+    var st = (D.config && D.config.status) || {};
+    if (st.phase === "playoffs" || st.phase === "league") return st.phase;
+    return st.playoffsStarted ? "playoffs" : "league";
+  };
+
+  /* A one-day tournament is a separate competition, not a stage of the
+     league — so it's its own switch, and can be on during either phase. */
+  D.isTournament = function () {
+    var st = (D.config && D.config.status) || {};
+    return !!st.tournamentMode;
+  };
+
+  /* The archive id this season's results get tagged with when they're moved
+     into the History tab. Set explicitly in config; otherwise guessed from
+     the season name ("Fall 2026 League" -> "2026-fall"). */
+  D.currentSeasonId = function () {
+    var st = (D.config && D.config.status) || {};
+    if (st.seasonId) return String(st.seasonId).trim().toLowerCase();
+
+    var name = String(st.seasonName || "");
+    var year = (name.match(/\b(20\d{2})\b/) || [])[1];
+    var seasons = ["winter", "spring", "summer", "fall", "autumn"];
+    var season = "";
+    for (var i = 0; i < seasons.length; i++) {
+      if (new RegExp(seasons[i], "i").test(name)) { season = seasons[i]; break; }
+    }
+    if (season === "autumn") season = "fall";
+    if (year && season) return year + "-" + season;
+    return "";
+  };
+
+  /* The competition id a tournament's results get tagged with. */
+  D.tournamentId = function () {
+    var t = (D.config && D.config.tournament) || {};
+    return String(t.archiveId || "").trim().toLowerCase();
+  };
+
+  /* Whether the Submit Result page should offer a "Tournament match" option.
+     Off by default: a one-day tournament often isn't run off the site, and
+     offering a form nobody uses is worse than not offering one. Turn it on
+     with tournament.submitResults in data/config.js. */
+  D.canSubmitTournament = function () {
+    var t = (D.config && D.config.tournament) || {};
+    return !!t.submitResults && !!D.tournamentId();
+  };
+
   /* --------------------------------------------------- playoff bracket --- */
 
   /* Standard knockout slot order for a bracket of `n` places.
@@ -643,7 +981,7 @@
   }
 
   /* -------------------------------------------------------------------------
-     Builds the whole bracket from the league tables.
+     Builds a bracket from a seed list, optionally filling in real results.
 
      Seeds are interleaved across the groups, so with two groups you get
      seed 1 = A1, seed 2 = B1, seed 3 = A2, seed 4 = B2, and so on. Feeding
@@ -651,34 +989,49 @@
      pairings (A3-B6, A4-B5, B3-A6, B4-A5) without them being written down
      anywhere — so it still works if the groups change size.
 
+     `lookup(homeId, awayId)` returns a played match for that pair, or null.
+     When it returns one, the tie gets scores, a `won` flag on the winning
+     side and a `winner` reference, which the next round then picks up.
+
      Returns: [{ name, format, ties:[...] }, ...]  one entry per round.
      ---------------------------------------------------------------------- */
-  D.projectedBracket = function () {
-    var shape = D.playoffShape();
-    var groups = shape.groups;
-    var tables = {};
-    groups.forEach(function (g) { tables[g] = D.standings(g); });
-
-    // seedList[0] is the top seed overall.
-    var seedList = [];
-    for (var pos = 1; pos <= shape.perGroup; pos++) {
-      groups.forEach(function (g) {
-        var r = tables[g][pos - 1];
-        seedList.push(r ? {
-          label: g + pos,
-          name: r.player.name,
-          id: r.player.id,
-          flag: r.player.flag,
-          outlook: r.outlook
-        } : null);
-      });
-    }
-
+  function buildBracket(seedList, shape, lookup) {
     if (shape.bracketSize < 2) return [];
 
     var order = seedOrder(shape.bracketSize);
     var totalRounds = shape.rounds;
     var rounds = [];
+
+    function sideFromSeed(s) {
+      if (!s) return null;
+      return { label: s.label, name: s.name, id: s.id, flag: s.flag, outlook: s.outlook };
+    }
+
+    /* Fill in a round's results from the match list, if we have one. */
+    function resolveRound(r) {
+      if (!lookup) return;
+      r.ties.forEach(function (tie) {
+        if (tie.kind !== "tie" || !tie.home || !tie.away) return;
+        if (!tie.home.id || !tie.away.id) return;
+        var m = lookup(tie.home.id, tie.away.id);
+        if (!m) return;
+        var s = D.legScore(m);
+        tie.match = m;
+        tie.home.score = s.a;
+        tie.away.score = s.b;
+        if (s.a > s.b) { tie.home.won = true; tie.winner = tie.home; }
+        else if (s.b > s.a) { tie.away.won = true; tie.winner = tie.away; }
+      });
+    }
+
+    /* Whoever comes out of a tie and into the next round. */
+    function advancing(tie) {
+      if (!tie || tie.kind === "empty") return null;
+      // A bye passes its player straight through to the next round.
+      if (tie.kind === "bye") return tie.home;
+      if (tie.winner) return tie.winner;
+      return { label: "", name: "Winner " + tie.id, id: null, flag: "", pending: true };
+    }
 
     /* --- first round: walk the slot order two slots at a time -----------
        Because the bracket is the SMALLEST power of two that fits everyone,
@@ -687,8 +1040,8 @@
     var firstCode = roundCode(1, totalRounds);
     var ties = [];
     for (var i = 0; i < order.length; i += 2) {
-      var pTop = seedList[order[i] - 1] || null;
-      var pBot = seedList[order[i + 1] - 1] || null;
+      var pTop = sideFromSeed(seedList[order[i] - 1] || null);
+      var pBot = sideFromSeed(seedList[order[i + 1] - 1] || null);
       var id = firstCode + "-" + (i / 2 + 1);
 
       if (pTop && pBot) ties.push({ id: id, kind: "tie", home: pTop, away: pBot });
@@ -696,23 +1049,13 @@
       else ties.push({ id: id, kind: "empty", home: null, away: null });
     }
 
-    rounds.push({
-      name: roundName(1, totalRounds),
-      format: roundFormat(1, totalRounds),
-      ties: ties
-    });
+    var first = { name: roundName(1, totalRounds), format: roundFormat(1, totalRounds), ties: ties };
+    resolveRound(first);
+    rounds.push(first);
 
     /* --- every later round: pair up whoever comes through --------------- */
-    function advancing(tie) {
-      if (!tie || tie.kind === "empty") return null;
-      // A bye passes its player straight through to the next round.
-      if (tie.kind === "bye") return tie.home;
-      return { label: "", name: "Winner " + tie.id, id: null, flag: "", pending: true };
-    }
-
     for (var round = 2; round <= totalRounds; round++) {
       var previous = rounds[rounds.length - 1].ties;
-      var name = roundName(round, totalRounds);
       var prefix = roundCode(round, totalRounds);
       var next = [];
 
@@ -726,10 +1069,158 @@
         });
       }
 
-      rounds.push({ name: name, format: roundFormat(round, totalRounds), ties: next });
+      var r = { name: roundName(round, totalRounds), format: roundFormat(round, totalRounds), ties: next };
+      resolveRound(r);
+      rounds.push(r);
     }
 
     return rounds;
+  }
+
+  /* The seeds for this season's playoffs. If data/playoffs.js has frozen a
+     snapshot (see the admin page), that wins — so a late result can't move
+     the bracket after it's been finalized. Otherwise they're worked out from
+     the current tables, which is what the "as if the season ended today"
+     projection has always done. */
+  D.playoffSeeds = function () {
+    var frozen = D.playoffs;
+    if (frozen && frozen.seeds && frozen.seeds.length) {
+      return frozen.seeds.map(function (s) {
+        var p = D.player(s.id);
+        return {
+          label: s.label, name: p.name, id: s.id, flag: p.flag,
+          group: s.group, pos: s.pos
+        };
+      });
+    }
+
+    var shape = D.playoffShape();
+    var tables = {};
+    shape.groups.forEach(function (g) { tables[g] = D.standings(g); });
+
+    var out = [];
+    for (var pos = 1; pos <= shape.perGroup; pos++) {
+      shape.groups.forEach(function (g) {
+        var r = tables[g][pos - 1];
+        if (r) out.push({
+          label: g + pos, name: r.player.name, id: r.player.id,
+          flag: r.player.flag, group: g, pos: pos, outlook: r.outlook
+        });
+      });
+    }
+    return out;
+  };
+
+  // True once the bracket has been frozen into data/playoffs.js.
+  D.bracketFinalized = function () {
+    return !!(D.playoffs && D.playoffs.seeds && D.playoffs.seeds.length);
+  };
+
+  /* Playoff matches for the current season. These live in the History tab
+     tagged with the season id and a round, so they never touch the league
+     table. A row with a round but no competition is treated as this
+     season's, which keeps hand-entered rows working. */
+  D.playoffMatches = function () {
+    var seasonId = D.currentSeasonId();
+    var pool = (D.matches || []).concat(D.history || []);
+    function key(s) { return String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, ""); }
+    var target = key(seasonId);
+    return pool.filter(function (m) {
+      if (!m.round) return false;
+      var c = key(m.competition);
+      if (!c) return true;
+      return !target || c === target;
+    });
+  };
+
+  /* The bracket with real results filled in. Unplayed ties keep their
+     "Winner QF-1" placeholder, so a half-finished bracket still reads.
+
+     When the seeds are frozen we size the bracket from the frozen list, not
+     from the live tables — otherwise marking a player inactive after the
+     season ends would silently shrink a bracket that's already been played. */
+  D.playoffBracket = function () {
+    var seeds = D.playoffSeeds();
+    var shape = D.bracketFinalized()
+      ? shapeFromSeedCount(seeds.length)
+      : D.playoffShape();
+    var matches = D.playoffMatches();
+
+    function lookup(a, b) {
+      for (var i = 0; i < matches.length; i++) {
+        var m = matches[i];
+        if ((m.a === a && m.b === b) || (m.a === b && m.b === a)) return m;
+      }
+      return null;
+    }
+
+    return buildBracket(seeds, shape, lookup);
+  };
+
+  /* The bracket geometry for a given number of qualifiers, with no reference
+     to groups or the live tables. */
+  function shapeFromSeedCount(qualifiers) {
+    var size = 1;
+    while (size < qualifiers) size *= 2;
+    if (qualifiers < 2) size = qualifiers;
+    return {
+      qualifiers: qualifiers,
+      bracketSize: size,
+      byes: size - qualifiers,
+      rounds: size > 1 ? Math.log(size) / Math.log(2) : 0
+    };
+  }
+
+  /* The projection: same bracket, no results, seeds straight from today's
+     tables. Used while the league is still running. */
+  D.projectedBracket = function () {
+    return buildBracket(D.playoffSeeds(), D.playoffShape(), null);
+  };
+
+  /* --------------------------------------------------------- tournament --- */
+
+  /* A one-day tournament is a flat knockout — no groups, no byes handed out
+     by finishing position. Entrants come from config.tournament.entrants if
+     it's filled in, otherwise every active player. Results come from the
+     History tab, tagged with the tournament's archive id. */
+  D.tournamentShape = function () {
+    var t = (D.config && D.config.tournament) || {};
+    var entrants = (t.entrants && t.entrants.length)
+      ? t.entrants.slice()
+      : D.activePlayers().map(function (p) { return p.id; });
+
+    var shape = shapeFromSeedCount(entrants.length);
+    shape.entrants = entrants;
+    return shape;
+  };
+
+  D.tournamentMatches = function () {
+    var id = D.tournamentId();
+    if (!id) return [];
+    function key(s) { return String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, ""); }
+    var target = key(id);
+    return (D.allMatchesEver() || []).filter(function (m) {
+      return key(m.competition) === target;
+    });
+  };
+
+  D.tournamentBracket = function () {
+    var shape = D.tournamentShape();
+    var seeds = shape.entrants.map(function (id, i) {
+      var p = D.player(id);
+      return { label: String(i + 1), name: p.name, id: p.id, flag: p.flag };
+    });
+    var matches = D.tournamentMatches();
+
+    function lookup(a, b) {
+      for (var i = 0; i < matches.length; i++) {
+        var m = matches[i];
+        if ((m.a === a && m.b === b) || (m.a === b && m.b === a)) return m;
+      }
+      return null;
+    }
+
+    return buildBracket(seeds, shape, lookup);
   };
 
   /* ------------------------------------------------------------ archive --- */
@@ -754,12 +1245,18 @@
   // Matches tagged with a specific competition ID or name (from history or current season)
   D.archiveMatches = function (compId) {
     if (!compId) return [];
-    var target = String(compId).trim().toLowerCase();
+    // Compare loosely: "2026-world-cup", "2026-worldcup" and "2026 World Cup"
+    // are all the same competition, and a stray hyphen shouldn't silently
+    // hide a whole archive page.
+    function key(s) {
+      return String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+    var target = key(compId);
     var a = D.archiveItem(compId);
-    var targetName = a && a.name ? a.name.trim().toLowerCase() : "";
+    var targetName = a && a.name ? key(a.name) : "";
     return (D.allMatchesEver() || []).filter(function (m) {
       if (!m.competition) return false;
-      var c = String(m.competition).trim().toLowerCase();
+      var c = key(m.competition);
       return c === target || (targetName && c === targetName);
     });
   };
@@ -811,30 +1308,51 @@
     return stats;
   };
 
-  // Playoff knockout data extracted from matches with round = quarter/semi/final
+  /* Playoff knockout data for a past competition.
+
+     The History tab is a flat list of results with a round code on each row.
+     It has no idea which quarter-final feeds which semi, so drawing a bracket
+     straight off row order can pair the wrong players together. Instead we
+     rebuild the bracket from the round codes: group the rows by round, order
+     the rounds from the earliest to the final, then walk forwards — each
+     match in round N+1 is matched to the two round-N matches whose winners
+     are its two players. That reconstructs the true shape whatever order the
+     results were entered in, and works for any bracket size (R1, R16, QF,
+     SF, F) rather than only ever knowing about quarters, semis and finals.
+
+     Returns the same shape as before — `quarters`/`semis`/`finals` are kept
+     so existing callers keep working, and `rounds` is the general version. */
   D.archivePlayoffs = function (compId) {
     var all = D.archiveMatches(compId);
     var playoffMatches = all.filter(function (m) { return !!m.round; });
-    var quarters = playoffMatches.filter(function (m) { return m.round === "quarter"; });
-    var semis = playoffMatches.filter(function (m) { return m.round === "semi"; });
-    var finals = playoffMatches.filter(function (m) { return m.round === "final"; });
 
-    // The History tab is just a flat list of results, usually in whatever
-    // order they were actually played — it has no idea which quarter-final
-    // feeds which semi, or which semi feeds the final. Drawn straight off
-    // that order, a bracket can end up showing (say) QF-1's winner meeting
-    // QF-3's winner in the semis, when the real bracket had them meeting
-    // QF-2's winner. Fix: walk backwards from the final. For each match one
-    // round up, pull its two competitors' own matches out of the previous
-    // round and sit them side by side — that reconstructs the true bracket
-    // shape no matter what order the results were entered in.
-    function reorderToMatch(nextRound, prevRound) {
+    // Canonical order, earliest round first. Anything unrecognised is
+    // treated as an opening round so it still shows up somewhere.
+    var ORDER = ["R64", "R32", "R16", "R1", "R2", "QF", "SF", "F"];
+    function rank(code) {
+      var i = ORDER.indexOf(code);
+      return i === -1 ? 0 : i;
+    }
+
+    var byRound = {};
+    playoffMatches.forEach(function (m) {
+      var code = m.round || "R1";
+      (byRound[code] = byRound[code] || []).push(m);
+    });
+
+    var codes = Object.keys(byRound).sort(function (x, y) { return rank(x) - rank(y); });
+
+    /* Walk forwards: for each match in the next round, find the two matches
+       in the previous round that produced its two players, and put them in
+       that order. Anything unmatched is appended so nothing is lost. */
+    function orderPrevious(nextRound, prevRound) {
       if (!nextRound.length || !prevRound.length) return prevRound;
       var used = {};
       function take(pid) {
         for (var i = 0; i < prevRound.length; i++) {
           if (used[i]) continue;
-          if (prevRound[i].a === pid || prevRound[i].b === pid) { used[i] = true; return prevRound[i]; }
+          var m = prevRound[i];
+          if (m.a === pid || m.b === pid) { used[i] = true; return m; }
         }
         return null;
       }
@@ -844,14 +1362,29 @@
         if (first) ordered.push(first);
         if (second) ordered.push(second);
       });
-      // Anything left over (e.g. this round isn't finished yet) is tacked
-      // on at the end in its original order rather than silently dropped.
       prevRound.forEach(function (m, i) { if (!used[i]) ordered.push(m); });
       return ordered;
     }
 
-    if (finals.length) semis = reorderToMatch(finals, semis);
-    if (semis.length) quarters = reorderToMatch(semis, quarters);
+    // Work backwards from the final so each round is ordered to feed the next.
+    var ordered = {};
+    for (var i = codes.length - 1; i >= 0; i--) {
+      var code = codes[i];
+      var next = codes[i + 1] ? ordered[codes[i + 1]] : null;
+      ordered[code] = next ? orderPrevious(next, byRound[code]) : byRound[code];
+    }
+
+    var rounds = codes.map(function (code) {
+      return {
+        code: code,
+        name: roundNameForCode(code),
+        matches: ordered[code]
+      };
+    });
+
+    var finals = ordered["F"] || [];
+    var semis = ordered["SF"] || [];
+    var quarters = ordered["QF"] || [];
 
     var champ = null, runnerUp = null;
     if (finals.length) {
@@ -865,6 +1398,7 @@
 
     return {
       matches: playoffMatches,
+      rounds: rounds,
       quarters: quarters,
       semis: semis,
       finals: finals,
@@ -872,6 +1406,19 @@
       runnerUp: runnerUp
     };
   };
+
+  /* Human name for a round code, used by the archive bracket. */
+  function roundNameForCode(code) {
+    if (code === "F") return "Final";
+    if (code === "SF") return "Semi-finals";
+    if (code === "QF") return "Quarter-finals";
+    if (code === "R1") return "Round One";
+    if (code === "R2") return "Round Two";
+    var m = String(code).match(/^R(\d+)$/);
+    if (m) return "Round of " + m[1];
+    return code;
+  }
+  D.roundNameForCode = roundNameForCode;
 
   /* ------------------------------------------- optional: google sheets --- */
 
@@ -918,15 +1465,41 @@
     return def;
   }
 
+  /* Turns whatever someone typed in the `round` column into one of our
+     canonical codes. Accepts the friendly words ("quarter", "semi", "final")
+     and the bracket codes ("QF", "SF", "F", "R1", "R16"), in any case, with
+     or without spaces or hyphens. Returns "" for a regular-season row. */
+  function normaliseRound(raw) {
+    var s = String(raw || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+    if (!s) return "";
+    if (/^(f|fn|final)$/.test(s)) return "F";
+    if (/^(sf|semi|semifinal|semifinals)$/.test(s)) return "SF";
+    if (/^(qf|quarter|quarterfinal|quarterfinals)$/.test(s)) return "QF";
+    var m = s.match(/^(?:r|round)(\d+)$/);
+    if (m) {
+      var n = parseInt(m[1], 10);
+      if (n === 1) return "R1";
+      if (n === 2) return "R2";
+      if (n === 4) return "QF";
+      if (n === 8) return "SF";
+      if (n === 16) return "R16";
+      if (n === 32) return "R32";
+      if (n === 64) return "R64";
+      return "R" + n;
+    }
+    if (/^(r1|roundone|firstround)$/.test(s)) return "R1";
+    return "";
+  }
+
   // Shared by the Matches tab and the History tab.
-  // Supports up to 5 legs (g1 through g5).
+  // Supports up to 9 legs (g1 through g9), so a best-of-7 playoff final fits.
   // History tab can also optionally include:
   //   - `competition` / `season`: matches an archive item ID (e.g. "2026-spring")
-  //   - `round`: "quarter", "semi", or "final" for playoff matches (blank = regular season)
+  //   - `round`: "quarter", "semi", "final", "r1", "r16" ... (blank = regular season)
   function rowsToMatches(objs) {
     return objs.map(function (r) {
       var legs = [];
-      [1, 2, 3, 4, 5].forEach(function (n) {
+      [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(function (n) {
         var g = r["g" + n + "game"], w = r["g" + n + "winner"];
         if (!w) return;
         g = g ? String(g).trim() : "leg";
@@ -935,15 +1508,10 @@
           aStat: numOrNull(r["g" + n + "a"]), bStat: numOrNull(r["g" + n + "b"])
         });
       });
-      var rawRound = String(r.round || r.stage || "").trim().toLowerCase();
-      var normRound = "";
-      if (/quarter|qf/.test(rawRound)) normRound = "quarter";
-      else if (/semi|sf/.test(rawRound)) normRound = "semi";
-      else if (/final|fn/.test(rawRound)) normRound = "final";
       return {
         date: r.date, group: (r.group || "").toUpperCase(),
         competition: (r.competition || r.season || r.comp || "").trim(),
-        round: normRound,
+        round: normaliseRound(r.round || r.stage),
         a: r.playera || r.a, b: r.playerb || r.b, legs: legs
       };
     }).filter(function (m) { return m.a && m.b && m.legs.length; });

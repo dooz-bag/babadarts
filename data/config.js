@@ -34,18 +34,60 @@ DATSU.config = {
   },
 
   /* ---- CURRENT LEAGUE STATUS (the badge on the front page) ------------
-     Two things only:
+     Two independent switches, because a league season and a one-day
+     tournament are different things:
 
-       running    true  = a league is on   -> green badge
-                  false = nothing running  -> amber badge
-       seasonName whatever you want it called                            */
+       phase           "league"   = matches are still being played
+                       "playoffs" = the bracket is finalized, show the
+                                    real bracket instead of a projection
+
+       tournamentMode  true = the site is showing a one-day tournament
+                       (World Cup, Doubles, whatever). Flip it on for the
+                       few days it runs, then flip it back. It works on top
+                       of either phase, so running a tournament mid-league
+                       never disturbs the league's own state.
+
+       seasonName      whatever you want this season called
+       seasonId        the archive id this season's results get tagged with
+                       when they're moved into the History tab. Leave blank
+                       and it's guessed from seasonName ("Fall 2026 League"
+                       -> "2026-fall").                              */
   status: {
     running: true,
     seasonName: "Fall 2026 League",
+    seasonId: "2026-fall",
 
-    /* Set to true when the league is finished and you want the playoff
-       bracket page to show the real bracket instead of a projection.   */
+    phase: "league",          // "league" | "playoffs"
+    tournamentMode: false,    // true = show the tournament instead
+
+    /* Old name for phase === "playoffs". Still honoured if it's the only
+       one set, so an existing config keeps working. */
     playoffsStarted: false
+  },
+
+  /* ---- THE TOURNAMENT (only used when status.tournamentMode is true) ---
+     archiveId must match an entry in data/archive.js, so the results land
+     on the right archive page and count toward career stats. The admin
+     page can create that entry for you.
+
+     submitResults  true  = the Submit Result page offers a "Tournament
+                            match" option while tournamentMode is on
+                    false = no tournament option at all. Use this if you
+                            aren't sure the site will be used on the day and
+                            would rather type the results in afterwards.  */
+  tournament: {
+    name: "World Cup of Darts 2026",
+    dates: "7 Nov 2026",
+    format: "Single elimination · best of 5",
+    archiveId: "2026-world-cup",
+    entrants: [],             // blank = every active player
+    submitResults: false
+  },
+
+  /* ---- SEASON AWARDS --------------------------------------------------
+     minGames stops a two-match cameo winning "most consistent".          */
+  awards: {
+    minGames: 4
   },
 
   /* ---- Scoring rules -------------------------------------------------- */

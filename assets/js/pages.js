@@ -189,14 +189,16 @@
         '<div class="fmt"><span>' + U.esc(tie.id) + '</span><span>Bye \u2014 straight through</span></div>' +
         '</div></div>';
     }
-    return '<div class="bracket-cell"><div class="tie">' +
+    return '<div class="bracket-cell"><div class="tie' + (tie.match ? ' is-played' : '') + '">' +
       bracketSideHtml(tie.home) + bracketSideHtml(tie.away) +
-      '<div class="fmt"><span>' + U.esc(tie.id) + '</span></div>' +
+      '<div class="fmt"><span>' + U.esc(tie.id) + '</span>' +
+      (tie.match ? '<span>' + U.esc(U.date(tie.match.date)) + '</span>' : '') +
+      '</div>' +
       '</div></div>';
   }
 
-  function bracketHtml() {
-    var rounds = D.projectedBracket();
+  /* Renders any bracket array (projected, live, or tournament) as HTML. */
+  function bracketRoundsHtml(rounds) {
     if (!rounds.length) {
       return '<p class="muted">Not enough players for a bracket yet.</p>';
     }
@@ -214,18 +216,95 @@
       '</div>';
   }
 
+  function bracketHtml() {
+    return bracketRoundsHtml(D.projectedBracket());
+  }
+
+  function tournamentBracketHtml() {
+    return bracketRoundsHtml(D.tournamentBracket());
+  }
+
+  /* One award, as a card. `award.winner` is null when nobody has played
+     enough matches to qualify, so the card says so rather than vanishing. */
+  var AWARD_ICONS = {
+    unlucky: "\ud83c\udf40",
+    dominance: "\ud83d\udc51",
+    heartbreak: "\ud83d\udc94",
+    clutch: "\ud83c\udfaf",
+    bottler: "\ud83e\udd0c",
+    metronome: "\u23f1\ufe0f",
+    rollercoaster: "\ud83c\udfa2",
+    improved: "\ud83d\udcc8",
+    fader: "\ud83d\udcc9",
+    "giant-killer": "\u2694\ufe0f",
+    specialist: "\ud83c\udf9a\ufe0f"
+  };
+
+  function awardCardHtml(award, tint) {
+    var icon = AWARD_ICONS[award.key] || "\ud83c\udfc6";
+    var colour = tint || "accent";
+    if (!award.winner) {
+      return '<div class="award-card tint-' + colour + '">' +
+        '<div class="award-head"><span class="award-icon">' + icon + '</span>' +
+        '<span class="award-name">' + U.esc(award.title) + '</span></div>' +
+        '<p class="award-blurb">' + U.esc(award.blurb) + '</p>' +
+        '<p class="award-empty">Not enough matches yet</p>' +
+        '</div>';
+    }
+    var p = award.winner.player;
+    return '<div class="award-card tint-' + colour + '">' +
+      '<div class="award-head"><span class="award-icon">' + icon + '</span>' +
+      '<span class="award-name">' + U.esc(award.title) + '</span></div>' +
+      '<p class="award-blurb">' + U.esc(award.blurb) + '</p>' +
+      '<div class="award-winner">' +
+      '<span class="award-who">' + U.esc(p.flag ? p.flag + " " : "") + U.esc(p.name) + '</span>' +
+      '<span class="award-value">' + U.esc(award.winner.display) + '</span>' +
+      '</div>' +
+      (award.winner.detail ? '<p class="award-detail">' + U.esc(award.winner.detail) + '</p>' : '') +
+      '</div>';
+  }
+
+  var AWARD_TINTS = ["accent", "accent-cool", "accent-warm", "accent-good",
+    "accent-gold", "accent-plum", "accent-violet"];
+
+  function awardsGridHtml(awards) {
+    if (!awards || !awards.length) return "";
+    return '<div class="grid grid-3">' + awards.map(function (a, i) {
+      return awardCardHtml(a, AWARD_TINTS[i % AWARD_TINTS.length]);
+    }).join("") + '</div>';
+  }
+
   /* ============================================================= HOME === */
 
-  /* One thing only: is a league on, and what it's called.
-     Green glow when it's running, amber when it isn't — nothing else on it. */
+  /* One thing only: what's on right now, and what it's called.
+     Green when a league is running, gold once the playoffs are live, and
+     violet while a one-day tournament is taking over the site. */
   function statusBadgeHtml() {
     var st = D.config.status;
+    var tournament = D.isTournament();
+    var playoffs = D.phase() === "playoffs";
     var on = st.running !== false;
-    return '<div class="status-badge ' + (on ? 'is-on' : 'is-off') + '">' +
+
+    var cls, label, sub;
+    if (tournament) {
+      cls = "is-tournament";
+      label = (D.config.tournament && D.config.tournament.name) || "Tournament";
+      sub = "Tournament day";
+    } else if (playoffs) {
+      cls = "is-playoffs";
+      label = st.seasonName;
+      sub = "Playoffs";
+    } else {
+      cls = on ? "is-on" : "is-off";
+      label = st.seasonName;
+      sub = on ? "Running now" : "Not running at the moment";
+    }
+
+    return '<div class="status-badge ' + cls + '">' +
       '<span class="status-dot"></span>' +
       '<span class="status-text">' +
-      '<strong>' + U.esc(st.seasonName) + '</strong>' +
-      '<span>' + (on ? 'Running now' : 'Not running at the moment') + '</span>' +
+      '<strong>' + U.esc(label) + '</strong>' +
+      '<span>' + U.esc(sub) + '</span>' +
       '</span>' +
       '</div>';
   }
@@ -234,6 +313,7 @@
     var cfg = D.config;
     var groups = D.groups();
     var shape = D.playoffShape();
+    var tournament = D.isTournament();
 
     var words = cfg.leagueName.split(" ");
     set("hero-title", '<span class="accent">' + U.esc(words[0]) + '</span> ' +
@@ -241,13 +321,22 @@
     set("hero-sub", U.esc(cfg.tagline) + " Soft tip darts, plenty of alcohol, and a running commentary nobody asked for.");
     set("hero-art", D.logoSvg("100%"));
 
-    set("hero-chips",
-      '<span class="chip"><strong>' + D.activePlayers().length + '</strong> players</span>' +
-      '<span class="chip"><strong>' + groups.length + '</strong> group' + (groups.length === 1 ? '' : 's') + '</span>' +
-      '<span class="chip"><strong>' + U.esc(cfg.rules.matchFormat) + '</strong></span>' +
-      '<span class="chip" title="The third leg\u2019s game is picked by whoever wins the cork toss">' +
-      U.esc(cfg.rules.game1) + ' \u2192 ' + U.esc(cfg.rules.game2) + ' \u2192 <strong>Decider</strong></span>' +
-      '<span class="chip">' + U.esc(cfg.venue.name) + '</span>');
+    if (tournament) {
+      var t = cfg.tournament || {};
+      set("hero-chips",
+        '<span class="chip"><strong>' + U.esc(t.name || "Tournament") + '</strong></span>' +
+        (t.dates ? '<span class="chip">' + U.esc(t.dates) + '</span>' : '') +
+        (t.format ? '<span class="chip">' + U.esc(t.format) + '</span>' : '') +
+        '<span class="chip">' + U.esc(cfg.venue.name) + '</span>');
+    } else {
+      set("hero-chips",
+        '<span class="chip"><strong>' + D.activePlayers().length + '</strong> players</span>' +
+        '<span class="chip"><strong>' + groups.length + '</strong> group' + (groups.length === 1 ? '' : 's') + '</span>' +
+        '<span class="chip"><strong>' + U.esc(cfg.rules.matchFormat) + '</strong></span>' +
+        '<span class="chip" title="The third leg\u2019s game is picked by whoever wins the cork toss">' +
+        U.esc(cfg.rules.game1) + ' \u2192 ' + U.esc(cfg.rules.game2) + ' \u2192 <strong>Decider</strong></span>' +
+        '<span class="chip">' + U.esc(cfg.venue.name) + '</span>');
+    }
 
     set("status-board", statusBadgeHtml());
 
@@ -255,9 +344,22 @@
     var quip = cfg.quips[Math.floor(Math.random() * cfg.quips.length)];
     set("quip-line", '<div class="wrap"><em>\u201c</em>' + U.esc(quip) + '<em>\u201d</em></div>');
 
-    /* The most recent results, however long ago that was */
+    /* The most recent results, however long ago that was. In tournament
+       mode we only show the tournament's own matches. */
     var nights = D.matchNights();
-    if (nights.length) {
+    if (tournament) {
+      var tId = D.tournamentId();
+      var tMatches = (D.allMatchesEver() || []).filter(function (m) {
+        return tId && String(m.competition || "").trim().toLowerCase() === tId;
+      }).sort(function (x, y) { return x.date < y.date ? 1 : x.date > y.date ? -1 : 0; });
+      if (tMatches.length) {
+        set("latest-results",
+          '<p class="date-head">Tournament results</p>' +
+          tMatches.map(resultRowHtml).join(""));
+      } else {
+        set("latest-results", '<div class="card"><p class="muted">No tournament results in yet. Get corking.</p></div>');
+      }
+    } else if (nights.length) {
       var n = nights[0];
       set("latest-results",
         '<p class="date-head">' + U.esc(U.weekday(n.date)) + ' ' + U.esc(U.date(n.date)) + '</p>' +
@@ -266,19 +368,27 @@
       set("latest-results", '<div class="card"><p class="muted">No results in yet. Get corking.</p></div>');
     }
 
-    /* Group tables — one per group, however many there are */
-    set("race-intro", 'Top ' + shape.perGroup + ' in each group make the playoffs.');
-    set("mini-tables", groups.map(function (g, i) {
-      return '<div>' +
-        '<h3 class="' + groupAccent(i) + '">Group ' + U.esc(g) + '</h3>' +
-        standingsTable(g, { showAverages: false, showOutlook: false, clickable: true }) +
-        '</div>';
-    }).join(""));
+    /* Group tables — one per group, however many there are. In tournament
+       mode the "race" becomes the live tournament bracket instead. */
+    if (tournament) {
+      set("race-intro", "Live tournament bracket");
+      set("mini-tables", '<div style="grid-column:1/-1">' + tournamentBracketHtml() + '</div>');
+      var mtT = $("mini-tables");
+      if (mtT) mtT.className = "grid";
+    } else {
+      set("race-intro", 'Top ' + shape.perGroup + ' in each group make the playoffs.');
+      set("mini-tables", groups.map(function (g, i) {
+        return '<div>' +
+          '<h3 class="' + groupAccent(i) + '">Group ' + U.esc(g) + '</h3>' +
+          standingsTable(g, { showAverages: false, showOutlook: false, clickable: true }) +
+          '</div>';
+      }).join(""));
 
-    var mt = $("mini-tables");
-    if (mt) {
-      // Two across on a wide screen, one per row on a narrow one
-      mt.className = "grid " + (groups.length >= 3 ? "grid-3" : "grid-2");
+      var mt = $("mini-tables");
+      if (mt) {
+        // Two across on a wide screen, one per row on a narrow one
+        mt.className = "grid " + (groups.length >= 3 ? "grid-3" : "grid-2");
+      }
     }
 
     /* Leaders snapshot */
@@ -360,6 +470,13 @@
       leaderCard("Highest single cricket game", L.highCricketGame, "Cricket Avg",
         L.highCricketGame ? "v " + D.playerName(L.highCricketGame.stats.bestCricket.opponent) : "", "accent-cool"));
 
+    /* ------------------------------------------- season awards --- */
+    set("season-awards", awardsGridHtml(D.seasonAwards()));
+    set("season-awards-note",
+      'Worked out from the results above \u2014 nothing to fill in. ' +
+      'Players need at least <strong>' + ((D.config.awards && D.config.awards.minGames) || 4) +
+      '</strong> matches to qualify, and forfeited or withdrawn players are left out.');
+
     /* ------------------------------ this season's match history collapse --- */
     var seasonMatches = (D.sortedMatches() || []).filter(function (m) { return !m.isUnplayedForfeit; });
     if (seasonMatches.length) {
@@ -381,18 +498,37 @@
 
   /* ========================================================= PLAYOFFS === */
 
+  /* Three things this page can be, decided by the two switches:
+
+       tournamentMode on   -> the one-day tournament bracket
+       phase "playoffs"    -> the real, finalized league bracket
+       otherwise           -> the projection ("as if the season ended today")
+
+     The projection keeps the outlook cards, because while the league is
+     still running "who's safe, who's sweating" is the whole point. Once the
+     bracket is real, those cards are replaced by the actual results. */
   D.pages.playoffs = function () {
-    var rules = D.config.rules;
+    if (D.isTournament()) return renderTournamentPage();
+    if (D.phase() === "playoffs") return renderLiveBracketPage();
+    return renderProjectionPage();
+  };
+
+  /* ------------------------------------------------- the projection --- */
+
+  function renderProjectionPage() {
     var shape = D.playoffShape();
-    var started = D.config.status.playoffsStarted;
     var rounds = D.projectedBracket();
 
+    set("playoff-eyebrow", "The business end");
+    set("playoff-title", "Playoff Picture");
+    set("bracket-heading", "Projected bracket");
+    set("outlook-heading", "Who's safe, who's sweating");
+    document.body.setAttribute("data-title", "Playoffs");
+
     set("playoff-intro",
-      (started
-        ? 'The bracket as it stands.'
-        : 'The league is still running, so this is the bracket <strong>as if the season ended today</strong>. ' +
-        'It updates itself the moment new results go in.') +
-      ' <strong>' + shape.qualifiers + '</strong> players qualify (top ' + shape.perGroup +
+      'The league is still running, so this is the bracket <strong>as if the season ended today</strong>. ' +
+      'It updates itself the moment new results go in. ' +
+      '<strong>' + shape.qualifiers + '</strong> players qualify (top ' + shape.perGroup +
       ' from each of the ' + shape.groups.length + ' groups) into a <strong>' + shape.bracketSize +
       '</strong>-place bracket' +
       (shape.byes > 0 ? ', which means <strong>' + shape.byes + '</strong> round-one byes for the highest seeds' : '') +
@@ -473,7 +609,163 @@
           U.esc(pairings) + '.</p>'
         : '') +
       '</div>');
-  };
+  }
+
+  /* ------------------------------------------------- the real bracket --- */
+
+  /* Everything the bracket needs to describe itself: how many ties are
+     played, how many are still to come, and who's left standing. */
+  function bracketProgress(rounds) {
+    var played = 0, total = 0, champion = null;
+    rounds.forEach(function (r) {
+      r.ties.forEach(function (t) {
+        if (t.kind !== "tie") return;
+        total++;
+        if (t.match) played++;
+      });
+    });
+    var last = rounds.length ? rounds[rounds.length - 1] : null;
+    if (last && last.ties.length === 1 && last.ties[0].winner) {
+      champion = last.ties[0].winner;
+    }
+    return { played: played, total: total, champion: champion };
+  }
+
+  function renderLiveBracketPage() {
+    var rounds = D.playoffBracket();
+    var progress = bracketProgress(rounds);
+    var seasonName = (D.config.status && D.config.status.seasonName) || "the season";
+    // Count from the frozen seeds, not the live tables — after a rollover
+    // everyone may be marked inactive, which would otherwise read as zero.
+    var qualifiers = D.playoffSeeds().length;
+
+    set("playoff-eyebrow", "The bracket");
+    set("playoff-title", "The Bracket");
+    set("bracket-heading", "The bracket");
+    set("outlook-heading", "Results so far");
+    document.body.setAttribute("data-title", "The Bracket");
+
+    var intro;
+    if (progress.champion) {
+      intro = '<strong>' + U.esc(progress.champion.flag ? progress.champion.flag + " " : "") +
+        U.esc(progress.champion.name) + '</strong> is the ' + U.esc(seasonName) + ' champion. ' +
+        'The full bracket is below.';
+    } else if (progress.played) {
+      intro = 'The bracket is live \u2014 <strong>' + progress.played + '</strong> of <strong>' +
+        progress.total + '</strong> ties played. Results go in as they happen.';
+    } else {
+      intro = 'The bracket is set. <strong>' + qualifiers + '</strong> players qualified, ' +
+        'and the first results will appear here as they come in.';
+    }
+    set("playoff-intro", intro);
+
+    set("bracket", bracketRoundsHtml(rounds));
+
+    set("bracket-note", rounds.length
+      ? 'Formats: ' + rounds.map(function (r) { return U.esc(r.name) + ' \u2014 ' + U.esc(r.format); }).join(' \u00b7 ') +
+        '. Scroll sideways on a phone to follow it across.'
+      : '');
+
+    /* The outlook cards are meaningless once the bracket is real, so they
+       become a results list instead. */
+    var playoffMatches = D.playoffMatches().slice().sort(function (x, y) {
+      return x.date < y.date ? 1 : x.date > y.date ? -1 : 0;
+    });
+
+    if (playoffMatches.length) {
+      set("outlook-cards",
+        '<div style="grid-column:1/-1">' +
+        '<h3 style="margin-bottom:12px">Road to the final</h3>' +
+        playoffMatches.map(resultRowHtml).join("") +
+        '</div>');
+    } else {
+      set("outlook-cards",
+        '<div class="card" style="grid-column:1/-1"><p class="muted">' +
+        'No playoff results logged yet. Use the button below once the first match is done.</p></div>');
+    }
+    var oc = $("outlook-cards");
+    if (oc) oc.className = "grid";
+
+    set("scenario-note",
+      '<div class="card card-accent-cool"><h3>Logging a playoff result</h3>' +
+      '<p>Playoff matches go in through the same form as league matches \u2014 pick ' +
+      '<strong>Playoff match</strong> at the top, choose the round, and enter the score and ' +
+      'averages exactly as normal.</p>' +
+      '<p class="muted tiny">They are stored in the History tab tagged with this season, so they ' +
+      'never disturb the league table.</p>' +
+      '<p><a class="btn" href="submit.html?mode=playoff">Log a playoff result</a></p>' +
+      '</div>');
+  }
+
+  /* ---------------------------------------------------- the tournament --- */
+
+  function renderTournamentPage() {
+    var t = D.config.tournament || {};
+    var shape = D.tournamentShape();
+    var rounds = D.tournamentBracket();
+    var progress = bracketProgress(rounds);
+
+    set("playoff-eyebrow", "Tournament day");
+    set("playoff-title", t.name || "Tournament");
+    set("bracket-heading", "The bracket");
+    set("outlook-heading", "Results so far");
+    document.body.setAttribute("data-title", t.name || "Tournament");
+
+    var intro = '<strong>' + U.esc(t.name || "Tournament") + '</strong>';
+    if (t.dates) intro += ' \u00b7 ' + U.esc(t.dates);
+    if (t.format) intro += ' \u00b7 ' + U.esc(t.format);
+    intro += '. <strong>' + shape.qualifiers + '</strong> entrants';
+    if (progress.champion) {
+      intro += ' \u2014 <strong>' + U.esc(progress.champion.flag ? progress.champion.flag + " " : "") +
+        U.esc(progress.champion.name) + '</strong> takes it.';
+    } else if (progress.played) {
+      intro += ' \u2014 <strong>' + progress.played + '</strong> of <strong>' + progress.total + '</strong> ties played.';
+    } else {
+      intro += '.';
+    }
+    set("playoff-intro", intro);
+
+    set("bracket", bracketRoundsHtml(rounds));
+
+    set("bracket-note", rounds.length
+      ? 'Scroll sideways on a phone to follow it across.'
+      : '');
+
+    var tMatches = D.tournamentMatches().slice().sort(function (x, y) {
+      return x.date < y.date ? 1 : x.date > y.date ? -1 : 0;
+    });
+
+    if (tMatches.length) {
+      set("outlook-cards",
+        '<div style="grid-column:1/-1">' +
+        '<h3 style="margin-bottom:12px">Tournament results</h3>' +
+        tMatches.map(resultRowHtml).join("") +
+        '</div>');
+    } else {
+      set("outlook-cards",
+        '<div class="card" style="grid-column:1/-1"><p class="muted">' +
+        'No results yet. First cork thrown shortly.</p></div>');
+    }
+    var oc = $("outlook-cards");
+    if (oc) oc.className = "grid";
+
+    set("scenario-note",
+      D.canSubmitTournament()
+        ? '<div class="card card-accent-cool"><h3>Logging a tournament result</h3>' +
+          '<p>Pick <strong>Tournament match</strong> at the top of the form, choose the round, and ' +
+          'enter the score and averages as normal.</p>' +
+          '<p class="muted tiny">Results are tagged with <code>' + U.esc(D.tournamentId() || "the tournament") +
+          '</code> in the History tab, so they show up on the archive page and count toward career stats.</p>' +
+          '<p><a class="btn" href="submit.html?mode=tournament">Log a tournament result</a></p>' +
+          '</div>'
+        : '<div class="card card-accent-cool"><h3>Results are logged afterwards</h3>' +
+          '<p>This tournament isn\u2019t being run through the site, so there\u2019s nothing to submit ' +
+          'here on the day. The bracket fills in once the results are added to the ' +
+          '<code>History</code> tab.</p>' +
+          '<p class="muted tiny">Results are tagged with <code>' + U.esc(D.tournamentId() || "the tournament") +
+          '</code>, so they show up on the archive page and count toward career stats.</p>' +
+          '</div>');
+  }
 
   /* ================================================ STATS & RECORDS === */
 
@@ -763,50 +1055,23 @@
       (a.venue ? '<span class="chip">' + U.esc(a.venue) + '</span>' : '') +
       '</div>';
 
-    // Playoff knockout bracket
-    var poRounds = [];
-    if (playoffs.quarters.length) {
-      poRounds.push({
-        name: "Quarter-finals",
-        ties: playoffs.quarters.map(function (m, i) {
+    // Playoff knockout bracket. `playoffs.rounds` is the general version —
+    // it works for any bracket size (R1, R16, QF, SF, F) rather than only
+    // ever knowing about quarters, semis and finals.
+    var poRounds = (playoffs.rounds || []).map(function (r) {
+      return {
+        name: r.name,
+        ties: r.matches.map(function (m, i) {
           var s = D.legScore(m);
           var pa = D.player(m.a), pb = D.player(m.b);
           return {
-            id: "QF-" + (i + 1),
+            id: r.code + "-" + (i + 1),
             home: { name: pa.name, flag: pa.flag, score: s.a, won: s.a > s.b },
             away: { name: pb.name, flag: pb.flag, score: s.b, won: s.b > s.a }
           };
         })
-      });
-    }
-    if (playoffs.semis.length) {
-      poRounds.push({
-        name: "Semi-finals",
-        ties: playoffs.semis.map(function (m, i) {
-          var s = D.legScore(m);
-          var pa = D.player(m.a), pb = D.player(m.b);
-          return {
-            id: "SF-" + (i + 1),
-            home: { name: pa.name, flag: pa.flag, score: s.a, won: s.a > s.b },
-            away: { name: pb.name, flag: pb.flag, score: s.b, won: s.b > s.a }
-          };
-        })
-      });
-    }
-    if (playoffs.finals.length) {
-      poRounds.push({
-        name: "Final",
-        ties: playoffs.finals.map(function (m, i) {
-          var s = D.legScore(m);
-          var pa = D.player(m.a), pb = D.player(m.b);
-          return {
-            id: "Final",
-            home: { name: pa.name, flag: pa.flag, score: s.a, won: s.a > s.b },
-            away: { name: pb.name, flag: pb.flag, score: s.b, won: s.b > s.a }
-          };
-        })
-      });
-    }
+      };
+    });
 
     if (poRounds.length) {
       var maxCells = Math.max.apply(null, poRounds.map(function (r) { return r.ties.length; }));
@@ -841,6 +1106,17 @@
         seasonLeaderCard("Most Wins", L.mostWins, "accent-gold", "int", "Matches won") +
         seasonLeaderCard("Highest Win %", L.bestWinPct, "accent-plum", "pct", "Min. 2 matches played") +
         '</div></div>';
+    }
+
+    // Season awards, worked out from this competition's own results. Same
+    // engine as the live League page, so an old season gets the same
+    // treatment without anything being written down by hand.
+    if (autoMatches.length) {
+      var seasonAwards = D.awardsForSeason(a.id);
+      if (seasonAwards.length) {
+        html += '<div class="section"><h2>Season awards</h2>' +
+          awardsGridHtml(seasonAwards) + '</div>';
+      }
     }
 
     if (a.results && a.results.length) {
@@ -1056,10 +1332,18 @@
       '</div>';
   }
 
-  function legFieldsetHtml(n, defaultGame) {
+  function legFieldsetHtml(n, defaultGame, bestOf) {
     var g1 = U.esc(D.config.rules.game1), g2 = U.esc(D.config.rules.game2);
+    var total = bestOf || 3;
+    var needed = legsToWin(total);
+    // The last leg of a best-of-N is the decider, and only exists if the
+    // match actually went that far.
+    var isDecider = n === total && total > 2;
+    var note = isDecider
+      ? ' <span class="muted">\u2014 only if it went to a decider</span>'
+      : (n > needed ? ' <span class="muted">\u2014 only if needed</span>' : '');
     return '<fieldset class="leg-fields">' +
-      '<legend>Leg ' + n + (n === 3 ? ' <span class="muted">\u2014 only if it went to a decider</span>' : '') + '</legend>' +
+      '<legend>Leg ' + n + note + '</legend>' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-g' + n + '-game">Game</label>' +
       '<select id="rf-g' + n + '-game">' +
@@ -1076,20 +1360,116 @@
   }
 
   function submitSuccessCardHtml(summary) {
+    var roundLabel = summary.round ? D.roundNameForCode(summary.round) : "";
+    var meta = [];
+    if (summary.mode === "tournament") meta.push("Tournament");
+    else if (summary.mode === "playoff") meta.push("Playoff");
+    if (roundLabel) meta.push(roundLabel);
+    if (summary.group) meta.push("Group " + summary.group);
+    meta.push(U.date ? U.date(summary.date) : summary.date);
+
     return '<div class="card submit-success-card">' +
       '<div class="submit-success-icon">\u2713</div>' +
       '<h2 class="submit-success-title">Result Submitted!</h2>' +
       '<p class="submit-success-summary">' + U.esc(summary.winnerName) + ' defeated ' + U.esc(summary.loserName) + ' (' + U.esc(summary.score) + ')</p>' +
-      '<p class="submit-success-meta">' + (summary.group ? 'Group ' + U.esc(summary.group) + ' \u00b7 ' : '') + U.esc(U.date ? U.date(summary.date) : summary.date) + '</p>' +
+      '<p class="submit-success-meta">' + U.esc(meta.join(' \u00b7 ')) + '</p>' +
       '<p class="muted tiny" style="max-width:380px;margin:0 auto 22px">Nice one! The result has been written to the Google Sheet. It may take a couple of minutes for Google\u2019s cache to reflect on the standings page.</p>' +
       '<div class="btn-row"><button type="button" class="btn" id="rf-submit-another">Log another match</button></div>' +
       '</div>';
+  }
+
+  /* The kinds of match the form can log. `target` is which sheet tab the row
+     goes to; playoff and tournament rows go to History so they never touch
+     the league table.
+
+     The tournament option only appears when tournament.submitResults is on —
+     a one-day event often isn't run off the site, and a form nobody uses is
+     worse than no form. Playoffs are always available. */
+  function submitModes() {
+    var modes = [
+      {
+        key: "league", label: "League match", target: "matches",
+        blurb: "A normal group match in the current season."
+      },
+      {
+        key: "playoff", label: "Playoff match", target: "history",
+        blurb: "A knockout match in this season's bracket."
+      }
+    ];
+    if (D.canSubmitTournament()) {
+      modes.push({
+        key: "tournament", label: "Tournament match", target: "history",
+        blurb: "A match in " + (D.config.tournament.name || "the tournament") + "."
+      });
+    }
+    return modes;
+  }
+
+  /* Round options for the playoff/tournament selectors, derived from the
+     bracket shape so a 16-player bracket offers R1 as well as QF/SF/F. */
+  function roundOptionsHtml(mode) {
+    var rounds;
+    if (mode === "tournament") {
+      rounds = D.tournamentBracket();
+    } else {
+      rounds = D.bracketFinalized() ? D.playoffBracket() : D.projectedBracket();
+    }
+    var seen = {};
+    var opts = '<option value="">\u2013</option>';
+    rounds.forEach(function (r) {
+      var code = r.ties && r.ties.length ? r.ties[0].id.split("-")[0] : "";
+      if (!code || seen[code]) return;
+      seen[code] = true;
+      opts += '<option value="' + U.esc(code) + '">' + U.esc(r.name) + '</option>';
+    });
+    return opts;
+  }
+
+  /* How many legs a knockout match can run to, from the round's format
+     string ("Best of 7" -> 7). Falls back to 5, which is what every round
+     uses unless config says otherwise. */
+  function bestOfForRound(mode, code) {
+    var rounds;
+    if (mode === "tournament") {
+      rounds = D.tournamentBracket();
+    } else {
+      rounds = D.bracketFinalized() ? D.playoffBracket() : D.projectedBracket();
+    }
+    var found = null;
+    rounds.forEach(function (r) {
+      var c = r.ties && r.ties.length ? r.ties[0].id.split("-")[0] : "";
+      if (c === code) found = r;
+    });
+    var m = found && String(found.format || "").match(/(\d+)/);
+    var n = m ? parseInt(m[1], 10) : 5;
+    if (!n || n < 1) n = 5;
+    if (n > 9) n = 9;
+    return n;
+  }
+
+  /* The number of legs needed to win a best-of-N match. */
+  function legsToWin(bestOf) {
+    return Math.floor(bestOf / 2) + 1;
+  }
+
+  /* Builds the leg fieldsets. League matches are always best of 3; knockout
+     matches can run to whatever the round's format says (up to best of 9),
+     so the form grows and shrinks with the round. */
+  function legFieldsHtml(mode, roundCode) {
+    var bestOf = mode === "league" ? 3 : bestOfForRound(mode, roundCode);
+    var html = "";
+    for (var n = 1; n <= bestOf; n++) {
+      var defaultGame = n === 1 ? "701" : (n === 2 ? "cricket" : "701");
+      html += legFieldsetHtml(n, defaultGame, bestOf);
+    }
+    return html;
   }
 
   function submitFormHtml() {
     var players = D.activePlayers().slice().sort(function (x, y) { return x.name.localeCompare(y.name); });
     var groups = D.groups();
     var cfg = D.config;
+    var modes = submitModes();
 
     var playerOpts = '<option value="">Choose\u2026</option>' + players.map(function (p) {
       return '<option value="' + U.esc(p.id) + '">' + U.esc(p.flag) + ' ' + U.esc(p.name) + '</option>';
@@ -1098,6 +1478,15 @@
     var groupOpts = '<option value="">\u2013</option>' + groups.map(function (g) {
       return '<option value="' + U.esc(g) + '">Group ' + U.esc(g) + '</option>';
     }).join("");
+
+    var modeHtml = '<div class="segmented" id="rf-mode" role="tablist">' +
+      modes.map(function (m, i) {
+        return '<button type="button" class="segmented-btn' + (i === 0 ? ' is-active' : '') +
+          '" data-mode="' + U.esc(m.key) + '" role="tab" aria-selected="' + (i === 0) + '">' +
+          U.esc(m.label) + '</button>';
+      }).join("") +
+      '</div>' +
+      '<p class="muted tiny" id="rf-mode-blurb" style="margin:-6px 0 16px">' + U.esc(modes[0].blurb) + '</p>';
 
     var sheetWarning = (!cfg.sheet || !cfg.sheet.enabled)
       ? '<p class="muted tiny">Heads up: this site is currently reading this season\u2019s results from ' +
@@ -1124,9 +1513,12 @@
       sheetWarning +
       scanCardHtml +
       '<form id="resultForm" class="card">' +
+      modeHtml +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-date">Date</label><input type="date" id="rf-date" value="' + todayIso() + '" required></div>' +
-      '<div class="field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
+      '<div class="field" id="rf-group-field"><label for="rf-group">Group</label><select id="rf-group">' + groupOpts + '</select></div>' +
+      '<div class="field" id="rf-round-field" style="display:none"><label for="rf-round">Round</label>' +
+      '<select id="rf-round">' + roundOptionsHtml("playoff") + '</select></div>' +
       '</div>' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-a">Player A</label><select id="rf-a">' + playerOpts + '</select></div>' +
@@ -1140,9 +1532,7 @@
       '<label for="rf-backfill">Yes, this is a past competition/tournament match (saves to History)</label>' +
       '</div>' +
       '</details>' +
-      legFieldsetHtml(1, "701") +
-      legFieldsetHtml(2, "cricket") +
-      legFieldsetHtml(3, "701") +
+      '<div id="rf-legs">' + legFieldsHtml("league", "") + '</div>' +
       '<div class="field-row">' +
       '<div class="field"><label for="rf-passcode">League passcode</label>' +
       '<input type="password" id="rf-passcode" autocomplete="off" required></div>' +
@@ -1159,6 +1549,21 @@
     var msg = $("rf-msg"), btn = $("rf-submit");
     var abortCtrl = null;
 
+    /* Which kind of match we're logging. "league" writes to the Matches tab;
+       "playoff" and "tournament" write to History tagged with a competition
+       and a round, so they never disturb the league table. */
+    var mode = "league";
+
+    function modeTarget() {
+      return mode === "league" ? "matches" : "history";
+    }
+
+    function modeCompetition() {
+      if (mode === "playoff") return D.currentSeasonId();
+      if (mode === "tournament") return D.tournamentId();
+      return "";
+    }
+
     function showMsg(kind, text) {
       msg.className = "form-msg is-" + kind;
       msg.textContent = text;
@@ -1166,33 +1571,115 @@
     function showErr(text) { showMsg("err", text); return false; }
     function showWarn(text) { showMsg("warn", text); }
 
+    /* How many legs the current match can run to. League is always best of
+       3; a knockout match follows its round's format. */
+    function currentBestOf() {
+      if (mode === "league") return 3;
+      var sel = $("rf-round");
+      return bestOfForRound(mode, sel ? sel.value : "");
+    }
+
+    /* Rebuilds the leg fieldsets for the current mode and round, keeping
+       anything already typed in for legs that still exist. */
+    function rebuildLegs() {
+      var wrap = $("rf-legs");
+      if (!wrap) return;
+
+      var kept = [];
+      for (var n = 1; n <= 9; n++) {
+        var w = $("rf-g" + n + "-winner");
+        if (!w) break;
+        kept.push({
+          game: $("rf-g" + n + "-game").value,
+          winner: w.value,
+          a: $("rf-g" + n + "-a").value,
+          b: $("rf-g" + n + "-b").value
+        });
+      }
+
+      var code = mode === "league" ? "" : ($("rf-round") ? $("rf-round").value : "");
+      wrap.innerHTML = legFieldsHtml(mode, code);
+
+      kept.forEach(function (v, i) {
+        var n = i + 1;
+        if (!$("rf-g" + n + "-winner")) return;
+        $("rf-g" + n + "-game").value = v.game;
+        $("rf-g" + n + "-a").value = v.a;
+        $("rf-g" + n + "-b").value = v.b;
+      });
+
+      refreshWinnerOptions();
+      refreshAvgLabels();
+    }
+
+    function setMode(next) {
+      mode = next;
+      var modes = submitModes();
+      var chosen = null;
+      modes.forEach(function (m) { if (m.key === next) chosen = m; });
+
+      Array.prototype.forEach.call(document.querySelectorAll("#rf-mode .segmented-btn"), function (b) {
+        var on = b.getAttribute("data-mode") === next;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+
+      var blurb = $("rf-mode-blurb");
+      if (blurb && chosen) blurb.textContent = chosen.blurb;
+
+      // League matches pick a group; knockout matches pick a round.
+      var groupField = $("rf-group-field");
+      var roundField = $("rf-round-field");
+      if (groupField) groupField.style.display = next === "league" ? "" : "none";
+      if (roundField) {
+        roundField.style.display = next === "league" ? "none" : "";
+        var sel = $("rf-round");
+        if (sel) sel.innerHTML = roundOptionsHtml(next);
+      }
+
+      // A knockout match is always a History row, so the "older match"
+      // checkbox is redundant there.
+      var backfill = $("rf-backfill");
+      if (backfill) {
+        if (next !== "league") backfill.checked = false;
+        var toggle = backfill.closest(".submit-history-toggle");
+        if (toggle) toggle.style.display = next === "league" ? "" : "none";
+      }
+
+      rebuildLegs();
+      refreshPlayerBOptions();
+    }
+
     function refreshWinnerOptions() {
       var aId = $("rf-a").value, bId = $("rf-b").value;
-      [1, 2, 3].forEach(function (n) {
+      for (var n = 1; n <= 9; n++) {
         var sel = $("rf-g" + n + "-winner");
+        if (!sel) break;
         var current = sel.value;
         sel.innerHTML = '<option value="">\u2013</option>' +
           (aId ? '<option value="' + U.esc(aId) + '">' + U.esc(D.player(aId).name) + '</option>' : '') +
           (bId ? '<option value="' + U.esc(bId) + '">' + U.esc(D.player(bId).name) + '</option>' : '');
         sel.value = (current === aId || current === bId) ? current : "";
-      });
+      }
     }
 
     function refreshAvgLabels() {
       var aId = $("rf-a").value, bId = $("rf-b").value;
       var aName = aId ? D.player(aId).name : "Player A";
       var bName = bId ? D.player(bId).name : "Player B";
-      [1, 2, 3].forEach(function (n) {
-        $("rf-g" + n + "-a-label").innerHTML = "Avg (" + U.esc(aName) + ") <span class=\"muted\">\u2014 optional</span>";
+      for (var n = 1; n <= 9; n++) {
+        var la = $("rf-g" + n + "-a-label");
+        if (!la) break;
+        la.innerHTML = "Avg (" + U.esc(aName) + ") <span class=\"muted\">\u2014 optional</span>";
         $("rf-g" + n + "-b-label").innerHTML = "Avg (" + U.esc(bName) + ") <span class=\"muted\">\u2014 optional</span>";
-      });
+      }
     }
 
     function refreshPlayerBOptions() {
       var aId = $("rf-a").value;
       var bSel = $("rf-b");
       var prevB = bSel.value;
-      var isHistory = $("rf-backfill").checked;
+      var isHistory = mode !== "league" || $("rf-backfill").checked;
       var noteEl = $("rf-matchup-note");
 
       if (!aId) {
@@ -1207,15 +1694,26 @@
       var playerA = D.player(aId);
       var candidates = D.activePlayers().filter(function (p) { return p.id !== aId; });
 
+      // A tournament can have its own entrant list, which may include people
+      // who aren't in the league groups.
+      if (mode === "tournament") {
+        var entrants = D.tournamentShape().entrants;
+        if (entrants && entrants.length) {
+          candidates = entrants.filter(function (id) { return id !== aId; })
+            .map(function (id) { return D.player(id); });
+        }
+      }
+
       // In regular season mode, filter opponents strictly to player A's group
-      if (!isHistory && playerA.group && playerA.group !== "?") {
+      if (mode === "league" && !isHistory && playerA.group && playerA.group !== "?") {
         candidates = candidates.filter(function (p) { return p.group === playerA.group; });
       }
       candidates.sort(function (x, y) { return x.name.localeCompare(y.name); });
 
       var optsHtml = '<option value="">Choose Player B\u2026</option>';
       candidates.forEach(function (p) {
-        var existing = !isHistory ? (D.findSeasonMatch ? D.findSeasonMatch(aId, p.id) : null) : null;
+        var existing = (mode === "league" && !isHistory && D.findSeasonMatch)
+          ? D.findSeasonMatch(aId, p.id) : null;
         if (existing) {
           var s = D.legScore(existing);
           var legStr = (existing.a === aId) ? (s.a + "\u2013" + s.b) : (s.b + "\u2013" + s.a);
@@ -1242,7 +1740,7 @@
       var aId = $("rf-a").value, bId = $("rf-b").value;
       var noteEl = $("rf-matchup-note");
       if (!noteEl) return;
-      var isHistory = $("rf-backfill").checked;
+      var isHistory = mode !== "league" || $("rf-backfill").checked;
 
       if (!aId || !bId || isHistory) {
         noteEl.style.display = "none";
@@ -1283,9 +1781,31 @@
 
     $("rf-group").addEventListener("change", function () { this.dataset.touched = "1"; });
 
+    var roundSel = $("rf-round");
+    if (roundSel) {
+      roundSel.addEventListener("change", function () { rebuildLegs(); });
+    }
+
     $("rf-backfill").addEventListener("change", function () {
       refreshPlayerBOptions();
     });
+
+    Array.prototype.forEach.call(document.querySelectorAll("#rf-mode .segmented-btn"), function (b) {
+      b.addEventListener("click", function () {
+        setMode(b.getAttribute("data-mode"));
+      });
+    });
+
+    /* Deep link: submit.html?mode=playoff / ?mode=tournament preselects the
+       mode, so the bracket page can send people straight here. */
+    var wanted = new URLSearchParams(window.location.search).get("mode");
+    if (wanted && submitModes().some(function (m) { return m.key === wanted; })) {
+      setMode(wanted);
+    } else if (D.isTournament() && submitModes().some(function (m) { return m.key === "tournament"; })) {
+      setMode("tournament");
+    } else if (D.phase() === "playoffs") {
+      setMode("playoff");
+    }
 
     /* --- Vision OCR / Screen Scanner --- */
     var scanInput = $("rf-scan-input");
@@ -1449,7 +1969,7 @@
         if (data.legs && data.legs.length) {
           data.legs.forEach(function (l, idx) {
             var n = idx + 1;
-            if (n > 3) return;
+            if (!$("rf-g" + n + "-winner")) return;
             if (l.game) {
               var gVal = l.game.toLowerCase().includes("cricket") ? "cricket" : "701";
               var gSel = $("rf-g" + n + "-game");
@@ -1539,18 +2059,24 @@
       showMsg("", "");
 
       var date = $("rf-date").value;
-      var isHistory = $("rf-backfill").checked;
+      var isHistory = mode !== "league" || $("rf-backfill").checked;
       var group = $("rf-group").value;
+      var round = mode === "league" ? "" : ($("rf-round") ? $("rf-round").value : "");
       var aId = $("rf-a").value, bId = $("rf-b").value;
       var passcode = $("rf-passcode").value;
 
       if (!date) return showErr("Pick a date.");
       if (!aId || !bId) return showErr("Pick both players.");
       if (aId === bId) return showErr("Player A and Player B can\u2019t be the same person.");
-      if (!isHistory && !group) return showErr("Pick a group \u2014 or tick \u201cOld result\u201d if this isn\u2019t part of the current season.");
+      if (mode === "league" && !isHistory && !group) {
+        return showErr("Pick a group \u2014 or tick \u201cOld result\u201d if this isn\u2019t part of the current season.");
+      }
+      if (mode !== "league" && !round) {
+        return showErr("Pick which round this " + (mode === "tournament" ? "tournament" : "playoff") + " match is.");
+      }
 
       // Check if this match was already recorded this season
-      if (!isHistory) {
+      if (mode === "league" && !isHistory) {
         var existing = D.findSeasonMatch ? D.findSeasonMatch(aId, bId) : null;
         if (existing) {
           var proceed = window.confirm(
@@ -1579,9 +2105,12 @@
         } catch (e) {}
       }
 
+      var bestOf = currentBestOf();
+      var needed = legsToWin(bestOf);
+
       var legs = [];
       var noAvgLegs = [];
-      for (var n = 1; n <= 3; n++) {
+      for (var n = 1; n <= bestOf; n++) {
         var game = $("rf-g" + n + "-game").value;
         var winner = $("rf-g" + n + "-winner").value;
         var aStat = $("rf-g" + n + "-a").value;
@@ -1593,10 +2122,15 @@
           return showErr("Leg " + n + " has an average for one player but not the other \u2014 fill in both, or leave them both blank.");
         }
 
-        if (n <= 2) {
-          if (!winner) return showErr("Pick a winner for leg " + n + ".");
-        } else if (!winner) {
-          if (statsGiven) return showErr("Leg 3 has an average filled in but no winner picked.");
+        if (!winner) {
+          if (statsGiven) return showErr("Leg " + n + " has an average filled in but no winner picked.");
+          // A leg with no winner is only allowed once the match is already
+          // decided — i.e. after the winner has reached `needed` legs.
+          var soFarA = legs.filter(function (l) { return l.winner === aId; }).length;
+          var soFarB = legs.filter(function (l) { return l.winner === bId; }).length;
+          if (Math.max(soFarA, soFarB) < needed) {
+            return showErr("Pick a winner for leg " + n + ".");
+          }
           continue;
         }
 
@@ -1610,11 +2144,16 @@
 
       var winsA = legs.filter(function (l) { return l.winner === aId; }).length;
       var winsB = legs.filter(function (l) { return l.winner === bId; }).length;
-      if (legs.length === 2 && winsA !== 2 && winsB !== 2) {
-        return showErr("Two legs in but nobody\u2019s won both \u2014 add leg 3, or double check the winners.");
+      var maxWins = Math.max(winsA, winsB);
+      var minWins = Math.min(winsA, winsB);
+
+      if (maxWins < needed) {
+        return showErr("Nobody has won " + needed + " legs yet \u2014 a best-of-" + bestOf +
+          " needs " + needed + " to win. Add the missing leg" + (needed - maxWins > 1 ? "s" : "") + ".");
       }
-      if (legs.length === 3 && Math.max(winsA, winsB) !== 2) {
-        return showErr("Three legs in, but that doesn\u2019t add up to a 2\u20131. Double check the winners.");
+      if (maxWins > needed) {
+        return showErr("That\u2019s " + maxWins + " legs to " + minWins + ", but a best-of-" + bestOf +
+          " ends at " + needed + ". Double check the winners.");
       }
 
       if (noAvgLegs.length) {
@@ -1627,9 +2166,17 @@
 
       var payload = {
         passcode: passcode,
-        target: isHistory ? "history" : "matches",
-        date: date, group: group, a: aId, b: bId, legs: legs
+        target: modeTarget(),
+        date: date,
+        group: mode === "league" ? group : "",
+        a: aId, b: bId, legs: legs
       };
+      // Knockout rows carry a competition and a round so they land on the
+      // right archive page and never count toward the league table.
+      if (mode !== "league") {
+        payload.competition = modeCompetition();
+        payload.round = round;
+      }
 
       // Summary details for the confirmation screen
       var matchWinnerId = winsA > winsB ? aId : bId;
@@ -1639,8 +2186,10 @@
         winnerName: D.playerName(matchWinnerId),
         loserName: D.playerName(matchLoserId),
         score: matchScore,
-        group: group,
-        date: date
+        group: mode === "league" ? group : "",
+        date: date,
+        round: round,
+        mode: mode
       };
 
       btn.disabled = true;
@@ -1722,5 +2271,478 @@
     }
     set("submit-body", submitFormHtml());
     wireSubmitForm(cfg.submitUrl);
+  };
+
+  /* ============================================================ ADMIN === */
+  /* Two once-a-season jobs, both of which would otherwise mean hand-editing
+     seventy rows in a spreadsheet:
+
+       1. Season rollover — review this season's rows, fix anything wrong,
+          then append them to the History tab tagged with the season id and
+          clear the Matches tab.
+       2. Finalize bracket — freeze the current standings into
+          data/playoffs.js so a late result can't move the seeds.
+
+     Nothing here writes to the site's own files (a static page can't). It
+     generates the blocks you paste in, and talks to the Apps Script for the
+     sheet work.                                                          */
+
+  function adminSeasonId() {
+    return D.currentSeasonId() || "2026-fall";
+  }
+
+  /* The rows we'd move, in the shape the History tab expects. */
+  function rolloverRows() {
+    return (D.matches || []).filter(function (m) { return !m.isUnplayedForfeit; })
+      .map(function (m) {
+        return {
+          date: m.date || "",
+          group: m.group || "",
+          a: m.a,
+          b: m.b,
+          legs: (m.legs || []).map(function (l) {
+            return { game: l.game, winner: l.winner, aStat: l.aStat, bStat: l.bStat };
+          }),
+          round: m.round || ""
+        };
+      });
+  }
+
+  /* Everything that would make a row land wrong in the History tab. */
+  function validateRow(row, index, seen) {
+    var problems = [];
+    if (!row.date) problems.push("no date");
+    else if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) problems.push("date isn't YYYY-MM-DD");
+
+    if (!row.a || !row.b) problems.push("missing a player");
+    if (row.a && row.b && row.a === row.b) problems.push("same player twice");
+
+    [row.a, row.b].forEach(function (id) {
+      if (!id) return;
+      var p = D.player(id);
+      if (!p || p.name === id) problems.push("unknown player \u201c" + id + "\u201d");
+    });
+
+    if (!row.legs.length) problems.push("no legs");
+
+    var winsA = 0, winsB = 0;
+    row.legs.forEach(function (l, i) {
+      if (!l.winner) problems.push("leg " + (i + 1) + " has no winner");
+      else if (l.winner !== row.a && l.winner !== row.b) {
+        problems.push("leg " + (i + 1) + " winner isn't one of the two players");
+      }
+      if (l.winner === row.a) winsA++;
+      if (l.winner === row.b) winsB++;
+    });
+
+    if (row.legs.length === 2 && winsA === 1 && winsB === 1) {
+      problems.push("two legs at 1\u20131 \u2014 a decider is missing");
+    }
+    if (row.legs.length >= 3 && Math.max(winsA, winsB) < 2) {
+      problems.push("nobody reached two legs");
+    }
+
+    var key = row.date + "|" + [row.a, row.b].sort().join("|");
+    if (seen[key]) problems.push("duplicate of row " + seen[key]);
+    else seen[key] = index + 1;
+
+    return problems;
+  }
+
+  /* Safe, mechanical fixes: trim ids, uppercase groups, ISO dates, drop
+     empty legs, and normalise the round code. Anything that needs a human
+     decision (a missing winner, an unknown player) is left alone and
+     re-flagged. */
+  function normaliseRow(row) {
+    var out = {
+      date: String(row.date || "").trim(),
+      group: String(row.group || "").trim().toUpperCase(),
+      a: String(row.a || "").trim().toLowerCase(),
+      b: String(row.b || "").trim().toLowerCase(),
+      round: String(row.round || "").trim().toUpperCase(),
+      legs: []
+    };
+
+    // 2026/11/07 or 7 Nov 2026 -> 2026-11-07
+    var d = out.date;
+    var slash = d.match(/^(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})$/);
+    if (slash) {
+      out.date = slash[1] + "-" + pad2(+slash[2]) + "-" + pad2(+slash[3]);
+    }
+
+    (row.legs || []).forEach(function (l) {
+      if (!l || !l.winner) return;
+      out.legs.push({
+        game: String(l.game || "leg").trim().toLowerCase(),
+        winner: String(l.winner).trim().toLowerCase(),
+        aStat: (typeof l.aStat === "number" && !isNaN(l.aStat)) ? l.aStat : null,
+        bStat: (typeof l.bStat === "number" && !isNaN(l.bStat)) ? l.bStat : null
+      });
+    });
+
+    return out;
+  }
+
+  /* The History tab is 42 columns wide (best of 9, so a best-of-7 final
+     fits); the Matches tab is 16. Getting this wrong is what silently
+     misaligns rows, so it's built in one place. */
+  function historyRowArray(row, competition) {
+    var out = [competition, row.date, row.group || "", row.a, row.b];
+    for (var n = 0; n < 9; n++) {
+      var leg = row.legs[n];
+      out.push(leg ? leg.game : "", leg ? leg.winner : "",
+        leg && leg.aStat !== null ? leg.aStat : "",
+        leg && leg.bStat !== null ? leg.bStat : "");
+    }
+    out.push(row.round || "");
+    return out;
+  }
+
+  function historyCsvLine(row, competition) {
+    return historyRowArray(row, competition).map(function (v) {
+      var s = String(v === null || v === undefined ? "" : v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(",");
+  }
+
+  var HISTORY_HEADER = "competition,date,group,playerA,playerB," +
+    "g1game,g1winner,g1a,g1b,g2game,g2winner,g2a,g2b," +
+    "g3game,g3winner,g3a,g3b,g4game,g4winner,g4a,g4b," +
+    "g5game,g5winner,g5a,g5b,g6game,g6winner,g6a,g6b," +
+    "g7game,g7winner,g7a,g7b,g8game,g8winner,g8a,g8b," +
+    "g9game,g9winner,g9a,g9b,round";
+
+  /* -------------------------------------------------- the rollover tool --- */
+
+  function adminRolloverHtml() {
+    var seasonId = adminSeasonId();
+    var rows = rolloverRows();
+
+    if (!rows.length) {
+      return '<div class="card"><h3>Nothing to roll over</h3>' +
+        '<p class="muted">There are no matches in this season\u2019s Matches tab right now.</p></div>';
+    }
+
+    return '<div class="card">' +
+      '<h3>1. Review the rows</h3>' +
+      '<p class="muted tiny">These are the ' + rows.length + ' matches currently in the Matches tab. ' +
+      'Fix anything wrong before committing \u2014 a bad row here becomes a bad row in the archive forever.</p>' +
+      '<div class="field-row" style="margin:16px 0">' +
+      '<div class="field"><label for="ad-season">Competition id</label>' +
+      '<input type="text" id="ad-season" value="' + U.esc(seasonId) + '"></div>' +
+      '<div class="field"><label for="ad-round">Default round for every row</label>' +
+      '<select id="ad-round"><option value="">Regular season</option>' +
+      '<option value="R1">Round One</option><option value="R16">Round of 16</option>' +
+      '<option value="QF">Quarter-finals</option><option value="SF">Semi-finals</option>' +
+      '<option value="F">Final</option></select></div>' +
+      '</div>' +
+      '<div class="btn-row" style="margin-top:0;margin-bottom:16px">' +
+      '<button type="button" class="btn btn-quiet" id="ad-normalise">Normalize rows</button>' +
+      '<button type="button" class="btn btn-quiet" id="ad-revalidate">Re-check</button>' +
+      '</div>' +
+      '<div id="ad-table"></div>' +
+      '<div id="ad-summary" style="margin-top:16px"></div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:16px">' +
+      '<h3>2. Commit</h3>' +
+      '<p class="muted tiny">This appends every row to the <strong>History</strong> tab tagged with the ' +
+      'competition id above, then clears the <strong>Matches</strong> tab (header row kept). ' +
+      'It refuses to clear anything if the append fails.</p>' +
+      '<div class="field-row" style="margin:16px 0">' +
+      '<div class="field"><label for="ad-passcode">League passcode</label>' +
+      '<input type="password" id="ad-passcode" autocomplete="off"></div>' +
+      '<div class="field"><label for="ad-confirm">Type the competition id to confirm</label>' +
+      '<input type="text" id="ad-confirm" placeholder="' + U.esc(seasonId) + '" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="btn-row" style="margin-top:0">' +
+      '<button type="button" class="btn btn-quiet" id="ad-preview">Preview (writes nothing)</button>' +
+      '<button type="button" class="btn" id="ad-commit">Commit rollover</button>' +
+      '</div>' +
+      '<div id="ad-msg" class="form-msg" aria-live="polite"></div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:16px">' +
+      '<h3>3. Paste these in afterwards</h3>' +
+      '<p class="muted tiny">The site can\u2019t edit its own files, so these two blocks are yours to paste.</p>' +
+      '<div id="ad-generated"></div>' +
+      '</div>';
+  }
+
+  function adminTableHtml(rows, problems) {
+    var body = rows.map(function (row, i) {
+      var p = problems[i] || [];
+      var cls = p.length ? " class=\"row-bad\"" : "";
+      var legs = row.legs.map(function (l) {
+        return U.esc(l.game) + " \u2192 " + U.esc(D.playerName(l.winner));
+      }).join(", ");
+      return '<tr' + cls + '>' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td>' + U.esc(row.date) + '</td>' +
+        '<td>' + U.esc(row.group || "\u2013") + '</td>' +
+        '<td>' + U.esc(D.playerName(row.a)) + ' <span class="muted">v</span> ' +
+        U.esc(D.playerName(row.b)) +
+        '<div class="admin-legs">' + legs + '</div></td>' +
+        '<td>' + (p.length
+          ? '<span class="accent-warm">' + U.esc(p.join("; ")) + '</span>'
+          : '<span class="accent-good">\u2713</span>') + '</td>' +
+        '</tr>';
+    }).join("");
+
+    return '<div class="table-wrap"><table class="data admin-table">' +
+      '<thead><tr><th>#</th><th>Date</th><th>Grp</th><th>Match</th>' +
+      '<th>Check</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  function adminGeneratedHtml(rows, seasonId) {
+    var csv = [HISTORY_HEADER].concat(rows.map(function (r) {
+      return historyCsvLine(r, seasonId);
+    })).join("\n");
+
+    var archiveEntry =
+      '  {\n' +
+      '    id: "' + seasonId + '",\n' +
+      '    type: "league",\n' +
+      '    name: "' + (D.config.status.seasonName || seasonId) + '",\n' +
+      '    dates: "' + (D.config.status.seasonName || seasonId) + '",\n' +
+      '    venue: "' + (D.config.venue.name || "") + '",\n' +
+      '    champion: "",\n' +
+      '    runnerUp: "",\n' +
+      '    playoffSpots: ' + (D.config.rules.playoffSpots || 6) + ',\n' +
+      '    byesPerGroup: 0,\n' +
+      '    blurb: "",\n' +
+      '    highlights: [],\n' +
+      '    finalTable: [],\n' +
+      '    results: [],\n' +
+      '    photos: []\n' +
+      '  },';
+
+    var resetMatches =
+      '/* ===========================================================================\n' +
+      '   DATSU — MATCH RESULTS (current season)\n' +
+      '   ---------------------------------------------------------------------------\n' +
+      '   Fresh season. Copy the m(...) shape from the top of the old file, or from\n' +
+      '   docs/UPDATING.md, and add results as you play them.\n' +
+      '   =========================================================================== */\n\n' +
+      'window.DATSU = window.DATSU || {};\n\n' +
+      'DATSU.matches = [\n' +
+      '  /* Add results here. */\n' +
+      '];\n';
+
+    return '<p class="eyebrow" style="margin-top:18px">History tab rows (CSV)</p>' +
+      '<p class="muted tiny">Paste into the History tab, replacing the header if it isn\u2019t already there.</p>' +
+      '<textarea class="admin-code" readonly rows="8">' + U.esc(csv) + '</textarea>' +
+      '<p class="eyebrow" style="margin-top:18px">data/archive.js entry</p>' +
+      '<p class="muted tiny">Add to the top of the <code>DATSU.archive</code> array, then fill in the champion.</p>' +
+      '<textarea class="admin-code" readonly rows="16">' + U.esc(archiveEntry) + '</textarea>' +
+      '<p class="eyebrow" style="margin-top:18px">data/matches.js (reset)</p>' +
+      '<p class="muted tiny">Replaces the whole file once the season is safely in History.</p>' +
+      '<textarea class="admin-code" readonly rows="10">' + U.esc(resetMatches) + '</textarea>';
+  }
+
+  /* ------------------------------------------------- finalize the bracket --- */
+
+  function adminBracketHtml() {
+    var seeds = D.playoffSeeds();
+    var finalized = D.bracketFinalized();
+
+    var seedList = seeds.map(function (s, i) {
+      return '<li>' + (i + 1) + '. <strong>' + U.esc(s.label) + '</strong> ' +
+        U.esc(s.flag ? s.flag + " " : "") + U.esc(s.name) + '</li>';
+    }).join("");
+
+    var block =
+      'DATSU.playoffs = {\n' +
+      '  seasonId: "' + adminSeasonId() + '",\n' +
+      '  finalizedAt: "' + todayIso() + '",\n' +
+      '  seeds: [\n' +
+      seeds.map(function (s) {
+        return '    { id: "' + s.id + '", label: "' + s.label + '", group: "' +
+          (s.group || "") + '", pos: ' + (s.pos || 0) + ' }';
+      }).join(",\n") +
+      '\n  ]\n' +
+      '};';
+
+    return '<div class="card">' +
+      '<h3>Finalize the bracket</h3>' +
+      '<p class="muted tiny">Freezes the seeds below into <code>data/playoffs.js</code>. ' +
+      'After that, a late result or a forfeit can\u2019t quietly move the bracket.</p>' +
+      (finalized
+        ? '<p class="accent-good tiny">\u2713 A bracket is already frozen' +
+          (D.playoffs.finalizedAt ? ' (finalized ' + U.esc(D.playoffs.finalizedAt) + ')' : '') +
+          '. Pasting the block below replaces it.</p>'
+        : '<p class="accent-warm tiny">No bracket frozen yet \u2014 the page is still projecting from the live tables.</p>') +
+      '<ol class="admin-seeds">' + seedList + '</ol>' +
+      '<p class="eyebrow" style="margin-top:18px">data/playoffs.js</p>' +
+      '<textarea class="admin-code" readonly rows="' + (seeds.length + 6) + '">' + U.esc(block) + '</textarea>' +
+      '<p class="eyebrow" style="margin-top:18px">Then flip the site over</p>' +
+      '<p class="muted tiny">In <code>data/config.js</code>:</p>' +
+      '<textarea class="admin-code" readonly rows="4">' +
+      U.esc('status: {\n  phase: "playoffs",\n  ...\n}') + '</textarea>' +
+      '</div>';
+  }
+
+  D.pages.admin = function () {
+    var cfg = D.config.resultsForm || {};
+    var rows = rolloverRows();
+    var problems = [];
+    var seen = {};
+
+    function revalidate() {
+      problems = [];
+      seen = {};
+      rows.forEach(function (r, i) { problems.push(validateRow(r, i, seen)); });
+    }
+    revalidate();
+
+    function drawTable() {
+      set("ad-table", adminTableHtml(rows, problems));
+      var bad = problems.filter(function (p) { return p.length; }).length;
+      set("ad-summary",
+        bad
+          ? '<p class="accent-warm tiny">\u26a0\ufe0f ' + bad + ' row' + (bad === 1 ? '' : 's') +
+            ' need attention before committing.</p>'
+          : '<p class="accent-good tiny">\u2713 All ' + rows.length + ' rows look clean.</p>');
+    }
+
+    set("admin-body",
+      '<div class="card card-accent-warm" style="margin-bottom:16px">' +
+      '<h3 class="accent-warm">Read this first</h3>' +
+      '<p>Rolling over is the one destructive thing on this site. It appends every row to ' +
+      '<strong>History</strong> and then <strong>clears the Matches tab</strong>. ' +
+      'Use <em>Preview</em> first \u2014 it writes nothing and shows exactly what would happen.</p>' +
+      '<p class="muted tiny">Google caches published sheets for a few minutes, so the site may keep ' +
+      'showing the old season for a little while after a successful rollover. That\u2019s Google, not a bug.</p>' +
+      '</div>' +
+      adminRolloverHtml() +
+      '<div style="margin-top:16px">' + adminBracketHtml() + '</div>');
+
+    drawTable();
+    set("ad-generated", adminGeneratedHtml(rows, adminSeasonId()));
+
+    /* --- buttons ------------------------------------------------------- */
+
+    var normaliseBtn = $("ad-normalise");
+    if (normaliseBtn) {
+      normaliseBtn.addEventListener("click", function () {
+        var defaultRound = $("ad-round") ? $("ad-round").value : "";
+        rows = rows.map(function (r) {
+          var n = normaliseRow(r);
+          if (!n.round && defaultRound) n.round = defaultRound;
+          return n;
+        });
+        revalidate();
+        drawTable();
+        set("ad-generated", adminGeneratedHtml(rows, $("ad-season").value || adminSeasonId()));
+      });
+    }
+
+    var revalidateBtn = $("ad-revalidate");
+    if (revalidateBtn) {
+      revalidateBtn.addEventListener("click", function () {
+        revalidate();
+        drawTable();
+      });
+    }
+
+    var seasonInput = $("ad-season");
+    if (seasonInput) {
+      seasonInput.addEventListener("change", function () {
+        set("ad-generated", adminGeneratedHtml(rows, seasonInput.value || adminSeasonId()));
+      });
+    }
+
+    function adminMsg(kind, text) {
+      var el = $("ad-msg");
+      if (!el) return;
+      el.className = "form-msg is-" + kind;
+      el.textContent = text;
+    }
+
+    function payloadFor(action) {
+      return {
+        action: action,
+        passcode: $("ad-passcode").value,
+        competition: $("ad-season").value || adminSeasonId(),
+        rows: rows.map(function (r) {
+          return {
+            date: r.date, group: r.group, a: r.a, b: r.b,
+            round: r.round || "",
+            legs: r.legs
+          };
+        })
+      };
+    }
+
+    function post(action) {
+      var url = cfg.submitUrl;
+      if (!url) {
+        adminMsg("err", "No Apps Script URL is set in data/config.js \u2192 resultsForm.submitUrl.");
+        return Promise.resolve(null);
+      }
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payloadFor(action))
+      }).then(function (r) { return r.json(); });
+    }
+
+    var previewBtn = $("ad-preview");
+    if (previewBtn) {
+      previewBtn.addEventListener("click", function () {
+        var bad = problems.filter(function (p) { return p.length; }).length;
+        if (bad) {
+          adminMsg("err", bad + " row(s) still need fixing \u2014 see the Check column.");
+          return;
+        }
+        adminMsg("pending", "Asking the sheet what it would do\u2026");
+        post("preview").then(function (res) {
+          if (!res) return;
+          if (res.ok) {
+            adminMsg("ok", "\u2713 Preview: " + (res.wouldWrite || rows.length) +
+              " rows would be appended to History as \u201c" + ($("ad-season").value || adminSeasonId()) +
+              "\u201d, then the Matches tab would be cleared. Nothing has been written.");
+          } else {
+            adminMsg("err", res.error || "The sheet said no.");
+          }
+        }).catch(function (err) {
+          adminMsg("err", "Couldn\u2019t reach the sheet: " + (err.message || err));
+        });
+      });
+    }
+
+    var commitBtn = $("ad-commit");
+    if (commitBtn) {
+      commitBtn.addEventListener("click", function () {
+        var seasonId = $("ad-season").value || adminSeasonId();
+        var typed = $("ad-confirm").value.trim();
+        var bad = problems.filter(function (p) { return p.length; }).length;
+
+        if (bad) {
+          adminMsg("err", bad + " row(s) still need fixing \u2014 see the Check column.");
+          return;
+        }
+        if (typed !== seasonId) {
+          adminMsg("err", "Type \u201c" + seasonId + "\u201d in the confirm box to unlock the commit.");
+          return;
+        }
+        if (!window.confirm(
+          "This will append " + rows.length + " rows to the History tab as \u201c" + seasonId +
+          "\u201d and then CLEAR the Matches tab.\n\nHave you run Preview and checked the rows?\n\n" +
+          "This cannot be undone from the website.")) return;
+
+        adminMsg("pending", "Rolling over\u2026 don\u2019t close this tab.");
+        post("rollover").then(function (res) {
+          if (!res) return;
+          if (res.ok) {
+            adminMsg("ok", "\u2713 Done. " + (res.written || rows.length) +
+              " rows moved to History. Now paste the blocks below into data/archive.js and data/matches.js.");
+          } else {
+            adminMsg("err", res.error || "The sheet said no \u2014 nothing was cleared.");
+          }
+        }).catch(function (err) {
+          adminMsg("err", "Couldn\u2019t reach the sheet: " + (err.message || err) +
+            " \u2014 nothing was cleared.");
+        });
+      });
+    }
   };
 })();

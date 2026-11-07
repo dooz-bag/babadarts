@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · TDL</title>
+  <meta name="description" content="Season rollover and bracket finalization tools." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+
+<!--
+  Not linked from the menu on purpose — it's a once-a-season tool, not a page
+  for players. Bookmark it, or reach it at /admin.html.
+-->
+
+<body data-page="admin" data-title="Admin">
+  <header class="site-header" id="site-header"></header>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Once a season</p>
+      <h1>Season <span class="accent">admin</span></h1>
+      <p class="hero-sub">Two jobs: move this season's results into the History tab, and
+        freeze the playoff bracket. Both are reversible until you commit.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div id="admin-body"></div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="data/config.js"></script>
+  <script src="data/players.js"></script>
+  <script src="data/matches.js"></script>
+  <script src="data/history.js"></script>
+  <script src="data/archive.js"></script>
+  <script src="data/playoffs.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/pages.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

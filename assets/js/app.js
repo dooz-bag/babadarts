@@ -67,19 +67,30 @@
 
   /* ------------------------------------------------------------- header --- */
 
-  var NAV = [
-    { href: "index.html", label: "Home", page: "home" },
-    { href: "league.html", label: "League Table", page: "league" },
-    { href: "playoffs.html", label: "Playoffs", page: "playoffs" },
-    { href: "stats.html", label: "Stats &amp; Records", page: "stats" },
-    { href: "players.html", label: "Players", page: "players" },
-    { href: "submit.html", label: "Submit Result", page: "submit" },
-    { href: "join.html", label: "Join Us", page: "join" }
-  ];
+  /* The nav is a function of the two switches rather than a fixed list, so
+     the bracket page can call itself "The Bracket" once the league is done,
+     or "Tournament" while a one-day event is on. */
+  function navItems() {
+    var tournament = D.isTournament();
+    var playoffs = D.phase() === "playoffs";
+    return [
+      { href: "index.html", label: "Home", page: "home" },
+      { href: "league.html", label: "League Table", page: "league" },
+      {
+        href: "playoffs.html",
+        label: tournament ? "Tournament" : (playoffs ? "The Bracket" : "Playoffs"),
+        page: "playoffs"
+      },
+      { href: "stats.html", label: "Stats &amp; Records", page: "stats" },
+      { href: "players.html", label: "Players", page: "players" },
+      { href: "submit.html", label: "Submit Result", page: "submit" },
+      { href: "join.html", label: "Join Us", page: "join" }
+    ];
+  }
 
   function buildHeader(current) {
     var cfg = D.config;
-    var links = NAV.map(function (n) {
+    var links = navItems().map(function (n) {
       // Labels are written just above, so they are trusted HTML
       return '<a href="' + n.href + '"' + (n.page === current ? ' class="active"' : '') + '>' +
         n.label + '</a>';
@@ -135,7 +146,9 @@
       '      <ul>' +
       '        <li><a href="league.html">League table</a></li>' +
       '        <li><a href="league.html#season-stats">Season stats &amp; highs</a></li>' +
-      '        <li><a href="playoffs.html">Playoff picture</a></li>' +
+      '        <li><a href="playoffs.html">' +
+      (D.isTournament() ? "Tournament bracket" : (D.phase() === "playoffs" ? "The bracket" : "Playoff picture")) +
+      '</a></li>' +
       '        <li><a href="stats.html">Overall career stats</a></li>' +
       '        <li><a href="archive.html">The archive</a></li>' +
       '        <li><a href="submit.html">Submit a result</a></li>' +

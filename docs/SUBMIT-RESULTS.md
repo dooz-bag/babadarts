@@ -39,6 +39,27 @@ var PASSCODE = "changeme";
 
 var SHEET_NAMES = { matches: "Matches", history: "History" };
 
+// The Matches tab is 16 columns (best of 3); the History tab is 42 (best of
+// 9, so a best-of-7 playoff final fits). Writing a 16-column row into History
+// silently misaligns every column after `playerB`, so the two shapes are
+// built separately and never mixed up.
+var MATCHES_HEADER = ["date", "group", "playerA", "playerB",
+  "g1game", "g1winner", "g1a", "g1b",
+  "g2game", "g2winner", "g2a", "g2b",
+  "g3game", "g3winner", "g3a", "g3b"];
+
+var HISTORY_HEADER = ["competition", "date", "group", "playerA", "playerB",
+  "g1game", "g1winner", "g1a", "g1b",
+  "g2game", "g2winner", "g2a", "g2b",
+  "g3game", "g3winner", "g3a", "g3b",
+  "g4game", "g4winner", "g4a", "g4b",
+  "g5game", "g5winner", "g5a", "g5b",
+  "g6game", "g6winner", "g6a", "g6b",
+  "g7game", "g7winner", "g7a", "g7b",
+  "g8game", "g8winner", "g8a", "g8b",
+  "g9game", "g9winner", "g9a", "g9b",
+  "round"];
+
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
@@ -46,29 +67,173 @@ function doPost(e) {
     if (String(body.passcode || "") !== PASSCODE) {
       return respond({ ok: false, error: "Wrong passcode." });
     }
-    if (!body.date || !body.a || !body.b || !body.legs || !body.legs.length) {
-      return respond({ ok: false, error: "Missing some required fields." });
-    }
 
-    var sheetName = SHEET_NAMES[body.target] || SHEET_NAMES.matches;
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-    if (!sheet) {
-      return respond({ ok: false, error: "Can't find a \"" + sheetName + "\" tab in this sheet." });
-    }
+    var action = String(body.action || "result");
 
-    // date, group, playerA, playerB, then 3 legs of (game, winner, a, b)
-    var legs = body.legs.slice(0, 3);
-    var row = [body.date, body.group || "", body.a, body.b];
-    for (var i = 0; i < 3; i++) {
-      var leg = legs[i];
-      row.push(leg ? leg.game : "", leg ? leg.winner : "", leg ? leg.aStat : "", leg ? leg.bStat : "");
-    }
+    if (action === "preview") return previewRollover(body);
+    if (action === "rollover") return commitRollover(body);
 
-    sheet.appendRow(row);
-    return respond({ ok: true });
+    return appendResult(body);
   } catch (err) {
     return respond({ ok: false, error: "Server error: " + err.message });
   }
+}
+
+/* ---------------------------------------------------------- one result --- */
+
+function appendResult(body) {
+  if (!body.date || !body.a || !body.b || !body.legs || !body.legs.length) {
+    return respond({ ok: false, error: "Missing some required fields." });
+  }
+
+  var isHistory = body.target === "history";
+  var sheetName = isHistory ? SHEET_NAMES.history : SHEET_NAMES.matches;
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    return respond({ ok: false, error: "Can't find a \"" + sheetName + "\" tab in this sheet." });
+  }
+
+  var values = isHistory
+    ? historyValues(body.competition || "", body.date, body.group, body.a, body.b, body.legs, body.round)
+    : matchesValues(body.date, body.group, body.a, body.b, body.legs);
+
+  var row = rowForSheet(sheet, values, isHistory ? HISTORY_HEADER : MATCHES_HEADER);
+  if (row.error) return respond({ ok: false, error: row.error });
+
+  sheet.appendRow(row.values);
+  return respond({ ok: true });
+}
+
+function matchesValues(date, group, a, b, legs) {
+  var v = { date: date, group: group || "", playera: a, playerb: b };
+  for (var i = 0; i < 3; i++) {
+    var leg = legs[i], n = i + 1;
+    v["g" + n + "game"] = leg ? leg.game : "";
+    v["g" + n + "winner"] = leg ? leg.winner : "";
+    v["g" + n + "a"] = leg ? leg.aStat : "";
+    v["g" + n + "b"] = leg ? leg.bStat : "";
+  }
+  return v;
+}
+
+function historyValues(competition, date, group, a, b, legs, round) {
+  var v = {
+    competition: competition, date: date, group: group || "",
+    playera: a, playerb: b, round: round || ""
+  };
+  for (var i = 0; i < 9; i++) {
+    var leg = legs[i], n = i + 1;
+    v["g" + n + "game"] = leg ? leg.game : "";
+    v["g" + n + "winner"] = leg ? leg.winner : "";
+    v["g" + n + "a"] = leg ? leg.aStat : "";
+    v["g" + n + "b"] = leg ? leg.bStat : "";
+  }
+  return v;
+}
+
+/* Builds the row in whatever order the sheet's own header row uses, so
+   adding or moving columns can never silently misalign a result. If the
+   sheet is too narrow to hold every leg, it says so rather than dropping
+   the extra legs on the floor. */
+function rowForSheet(sheet, values, fallbackHeader) {
+  var width = sheet.getLastColumn();
+  var header;
+
+  if (!width) {
+    header = fallbackHeader;
+  } else {
+    header = sheet.getRange(1, 1, 1, width).getValues()[0].map(function (h) {
+      return String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    });
+  }
+
+  var missing = [];
+  Object.keys(values).forEach(function (k) {
+    if (values[k] !== "" && header.indexOf(k) === -1) missing.push(k);
+  });
+  if (missing.length) {
+    return {
+      error: "The " + sheet.getName() + " tab is missing the column(s) " +
+        missing.join(", ") + ". Add them to the header row and try again."
+    };
+  }
+
+  return {
+    values: header.map(function (h) {
+      return values[h] === undefined ? "" : values[h];
+    })
+  };
+}
+
+/* ------------------------------------------------------ season rollover --- */
+
+/* Dry run. Validates every row and reports what would happen, without
+   writing anything. The admin page calls this before letting you commit. */
+function previewRollover(body) {
+  var rows = body.rows || [];
+  if (!rows.length) return respond({ ok: false, error: "No rows to roll over." });
+  if (!body.competition) return respond({ ok: false, error: "No competition id given." });
+
+  var problems = [];
+  rows.forEach(function (r, i) {
+    if (!r.date || !r.a || !r.b) problems.push("Row " + (i + 1) + ": missing date or player.");
+    if (!r.legs || !r.legs.length) problems.push("Row " + (i + 1) + ": no legs.");
+  });
+  if (problems.length) {
+    return respond({ ok: false, error: problems.slice(0, 5).join(" ") });
+  }
+
+  return respond({ ok: true, wouldWrite: rows.length, competition: body.competition });
+}
+
+/* The real thing: append every row to History, then clear Matches. The
+   clear only happens if the append succeeded, so a failure can never lose
+   the season. */
+function commitRollover(body) {
+  var rows = body.rows || [];
+  var competition = body.competition;
+  if (!rows.length) return respond({ ok: false, error: "No rows to roll over." });
+  if (!competition) return respond({ ok: false, error: "No competition id given." });
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var history = ss.getSheetByName(SHEET_NAMES.history);
+  var matches = ss.getSheetByName(SHEET_NAMES.matches);
+  if (!history) return respond({ ok: false, error: "Can't find the History tab." });
+  if (!matches) return respond({ ok: false, error: "Can't find the Matches tab." });
+
+  // Make sure the History tab has a header before appending to it.
+  if (history.getLastRow() === 0) {
+    history.appendRow(HISTORY_HEADER);
+  }
+
+  var out = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var built = rowForSheet(
+      history,
+      historyValues(competition, r.date, r.group, r.a, r.b, r.legs || [], r.round),
+      HISTORY_HEADER
+    );
+    if (built.error) {
+      return respond({ ok: false, error: "Row " + (i + 1) + ": " + built.error + " Nothing was cleared." });
+    }
+    out.push(built.values);
+  }
+
+  try {
+    history.getRange(history.getLastRow() + 1, 1, out.length, out[0].length)
+      .setValues(out);
+  } catch (err) {
+    return respond({ ok: false, error: "Couldn't write to History, so nothing was cleared: " + err.message });
+  }
+
+  // Only now is it safe to empty the Matches tab. Keep the header row.
+  var last = matches.getLastRow();
+  if (last > 1) {
+    matches.getRange(2, 1, last - 1, matches.getLastColumn()).clearContent();
+  }
+
+  return respond({ ok: true, written: out.length });
 }
 
 function respond(obj) {
@@ -80,9 +245,20 @@ function respond(obj) {
 4. Change the `PASSCODE` value on the first line to whatever you want your
    passcode to be, then **save** (the disk icon, or `Ctrl+S`).
 
-This script only knows how to do one thing — append a row to `Matches` or
-`History` if the passcode matches. It can't read, edit or delete anything
-else in the sheet.
+This script can do three things, all gated on the passcode:
+
+| `action` | What it does |
+| --- | --- |
+| *(none)* / `result` | Appends one match to `Matches` or `History`, in the right column shape for that tab |
+| `preview` | Validates a rollover and reports what it *would* write. Writes nothing |
+| `rollover` | Appends every row to `History` tagged with the competition id, then clears `Matches` |
+
+It can't read, edit or delete anything else in the sheet.
+
+> **If you set this up before the rollover feature existed**, re-paste the
+> script above and redeploy (see *Redeploying* below). The old version always
+> wrote a 16-column row, which misaligns the 26-column `History` tab — so
+> "log an older match" was quietly writing broken rows.
 
 ## Step 2 — Publish it as a web app
 
@@ -144,8 +320,44 @@ The URL stays exactly the same, so nothing needs re-pasting into `config.js`.
   little while to actually appear on the site. That's Google's doing, not a
   bug in the form.
 - **The script only appends rows.** It can't be used to edit or delete an
-  existing result — do that the normal way, directly in the sheet.
+  existing result — do that the normal way, directly in the sheet. The one
+  exception is `rollover`, which clears the `Matches` tab *after* it has
+  successfully written every row to `History`.
 - **Nothing about the rest of the site depends on this.** If you never touch
   any of the above, `submit.html` just shows a card explaining how to set it
   up, and everyone keeps adding results the way described in
   [docs/UPDATING.md](UPDATING.md) or [docs/GOOGLE-SHEET.md](GOOGLE-SHEET.md).
+
+## Playoff and tournament results
+
+The same form logs knockout matches. Pick **Playoff match** or **Tournament
+match** at the top instead of **League match**, and a round selector appears.
+
+Those rows go to the `History` tab with two extra columns filled in:
+
+- `competition` — the season id (`2026-fall`) for a playoff match, or the
+  tournament's `archiveId` (`2026-world-cup`) for a tournament match
+- `round` — `R1`, `R16`, `QF`, `SF` or `F`
+
+Because they're tagged, they never count toward the league table, and they
+render on the right archive page automatically. See
+[docs/GOOGLE-SHEET.md](GOOGLE-SHEET.md#optional-a-third-tab-history-for-career-averages)
+for the accepted `round` values.
+
+## Rolling a season over
+
+Once the season is done, `admin.html` moves every row from `Matches` into
+`History` in one go, tagged with the season id — no hand-editing seventy rows.
+
+1. Open `admin.html` (it isn't in the menu; go to `/admin.html` directly).
+2. Check the review table. Anything wrong is flagged in the **Check** column.
+3. Hit **Normalize rows** to apply the safe fixes (trim ids, uppercase groups,
+   ISO dates, drop empty legs).
+4. Hit **Preview** — this asks the script what it *would* do and writes nothing.
+5. Type the competition id in the confirm box, then **Commit rollover**.
+6. Paste the generated `data/archive.js` entry and the reset `data/matches.js`
+   into those files.
+
+The script appends to `History` first and only clears `Matches` if that
+succeeded, so a failure can never lose the season.
+
