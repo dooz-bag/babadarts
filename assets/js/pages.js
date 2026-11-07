@@ -915,15 +915,20 @@
         champs.map(function (a) {
           var isTournament = a.type === "tournament";
           var isPopulated = D.isArchivePopulated ? D.isArchivePopulated(a) : (a.photos && a.photos.length);
-          var badgeCls = "honour-badge " + (isTournament ? "tournament" : "league") + (isPopulated ? " is-populated" : "");
-          return '<a class="' + badgeCls + '" ' +
-            'href="season.html?s=' + encodeURIComponent(a.id) + '">' +
+          // A hidden competition keeps its badge — the win still happened —
+          // but there's no page behind it, so it isn't a link.
+          var isHidden = D.isArchiveHidden ? D.isArchiveHidden(a) : false;
+          var badgeCls = "honour-badge " + (isTournament ? "tournament" : "league") +
+            (isPopulated && !isHidden ? " is-populated" : "") + (isHidden ? " is-hidden-entry" : "");
+          var inner =
             '<div class="medal">' + (isTournament ? "\ud83c\udfaf" : "\ud83c\udfc6") + '</div>' +
             '<p class="event">' + U.esc(isTournament ? "Tournament" : "League") + '</p>' +
             '<p class="champ">' + U.esc(a.champion) + '</p>' +
             '<p class="when">' + U.esc(a.name) + '</p>' +
-            (isPopulated ? '<span class="archive-pill">\u25ce Full Story &amp; Photos</span>' : '') +
-            '</a>';
+            (isPopulated && !isHidden ? '<span class="archive-pill">\u25ce Full Story &amp; Photos</span>' : '');
+          return isHidden
+            ? '<div class="' + badgeCls + '">' + inner + '</div>'
+            : '<a class="' + badgeCls + '" href="season.html?s=' + encodeURIComponent(a.id) + '">' + inner + '</a>';
         }).join("") + '</div>'
       : '<p class="muted">No past competitions recorded yet.</p>');
   };
@@ -998,7 +1003,7 @@
   /* ========================================================== ARCHIVE === */
 
   D.pages.archive = function () {
-    var items = D.archive || [];
+    var items = D.archiveVisible ? D.archiveVisible() : (D.archive || []);
     if (!items.length) {
       set("archive-grid", '<p class="muted">Nothing archived yet.</p>');
       return;
@@ -1030,6 +1035,19 @@
   D.pages.season = function () {
     var id = new URLSearchParams(window.location.search).get("s");
     var a = id ? D.archiveItem(id) : null;
+
+    // A hidden competition has no page of its own — its champion still shows
+    // in the Roll of Honour, but there's nothing here to read.
+    if (a && a.hidden) {
+      document.title = a.name + " \u00b7 " + D.config.leagueShortName;
+      set("season-body",
+        '<div class="card"><h2>' + U.esc(a.name) + '</h2>' +
+        '<p>There isn\'t a write-up for this one \u2014 it was a one-day event and ' +
+        'didn\'t leave enough behind to fill a page. The result still counts: ' +
+        'it\'s in the Roll of Honour and in the career averages.</p>' +
+        '<p><a class="btn" href="archive.html">Back to the archive</a></p></div>');
+      return;
+    }
 
     if (!a) {
       set("season-body",

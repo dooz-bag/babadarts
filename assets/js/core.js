@@ -1277,6 +1277,20 @@
     return null;
   };
 
+  /* Entries marked `hidden: true` in data/archive.js still exist — they keep
+     their champion in the Roll of Honour and their results in the career
+     averages — but they get no card on the Archive page, no link in the
+     Archive menu, and no page of their own. Use it for a competition that
+     happened but doesn't have enough behind it to fill a page. */
+  D.archiveVisible = function () {
+    return (D.archive || []).filter(function (a) { return !a.hidden; });
+  };
+
+  D.isArchiveHidden = function (itemOrId) {
+    var a = typeof itemOrId === "string" ? D.archiveItem(itemOrId) : itemOrId;
+    return Boolean(a && a.hidden);
+  };
+
   // True if an archive entry has actual documented content (photos, results,
   // final table, or logged match rows) rather than just a placeholder title.
   D.isArchivePopulated = function (itemOrId) {

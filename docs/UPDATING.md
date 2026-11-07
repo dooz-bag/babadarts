@@ -204,6 +204,28 @@ Then reset `data/matches.js` for the new season — delete the old match lines
 instead of just deleting them** — that's what keeps career averages accurate.
 See the next section.
 
+### Hiding an entry you don't want a page for
+
+Some competitions happened but don't have enough behind them to fill a page —
+a one-day event with two results and no photos, say. Add `hidden: true` to the
+block:
+
+```js
+{
+  id: "2026-world-cup",
+  type: "tournament",
+  name: "World Cup of Darts 2026",
+  champion: "Martin",
+  // ...
+  hidden: true
+}
+```
+
+That removes its card from the Archive page, its link in the Archive menu, and
+its page. The win still counts: the champion keeps their badge in the Roll of
+Honour (just not as a link), and any results tagged with that competition id
+still feed the career averages. Delete the line to bring the page back.
+
 ## 4a. Season awards
 
 The League Table page has a **Season awards** section, and every archived

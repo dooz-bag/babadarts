@@ -723,6 +723,11 @@ a.honour-badge.league:hover {
   letter-spacing: 0;
 }
 
+/* A competition with no page behind it. The badge still records the win,
+   it just isn't a link, so it shouldn't look like one. */
+.honour-badge.is-hidden-entry { cursor: default; }
+.honour-badge.is-hidden-entry .medal { opacity: 0.75; }
+
 /* ------------------------------------------------------------- AVATARS --- */
 .avatar {
   width: 38px; height: 38px; flex: none;

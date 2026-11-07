@@ -11,6 +11,10 @@
    photos    put image files in  assets/img/archive/  and list them here.
              If a photo file is missing you'll see a friendly placeholder
              telling you exactly which file to drop in — nothing breaks.
+   hidden    true = no card, no menu link, no page. The champion still shows
+             in the Roll of Honour and the results still count towards career
+             averages. Use it for an event with too little behind it to fill
+             a page.
    =========================================================================== */
 
 window.DATSU = window.DATSU || {};
@@ -137,6 +141,10 @@ DATSU.archive = [
     highlights: [],
     finalTable: [],
     results: [],
-    photos: []
+    photos: [],
+    // Not enough behind it to fill a page. The win still counts — Martin
+    // keeps his badge in the Roll of Honour and these results still feed the
+    // career averages — it just doesn't get a card, a menu link or a page.
+    hidden: true
   }
 ];
