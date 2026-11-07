@@ -96,6 +96,25 @@ DATSU.config = {
     hiddenAwards: ["bottler"]
   },
 
+  /* ---- ダーツ Index ----------------------------------------------------
+     The single rating on the stats pages: 01 and cricket, 50/50.
+
+     Each game scores 100 at the reference below, so the two references
+     have to be equally hard to reach — otherwise one game quietly drags
+     everyone down. 60 PPD is about 11% above the league's average 01
+     game, so cricket's reference sits the same distance above its own
+     average: 2.20 MPR.
+
+     (It used to be 2.50, which is 26% above the average cricket game.
+     That made cricket score roughly 11 index points lower than 01 for
+     no good reason, and underweighted anyone who is better at cricket.)
+
+     Re-check these if the league's standard moves a long way.        */
+  index: {
+    ppd: 60,
+    mpr: 2.2
+  },
+
   /* ---- Scoring rules -------------------------------------------------- */
   rules: {
     pointsForWin: 1,

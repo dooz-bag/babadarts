@@ -482,6 +482,20 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
   text-transform: uppercase;
   color: var(--muted);
 }
+/* Says which average an award is talking about, so "69.13 avg" can't be
+   mistaken for a cricket average. */
+.award-basis {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
 .award-blurb {
   margin: 0;
   font-size: 0.86rem;

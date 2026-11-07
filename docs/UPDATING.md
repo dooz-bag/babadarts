@@ -247,8 +247,31 @@ PPD (points per dart) and MPR (marks per round) are different units, so they
 stay in separate columns everywhere. The awards that talk about averages
 (Unlucky, Metronome, Rollercoaster, Most Improved, Fader) use **01 only**,
 because 01 legs are the ones every match has and PPD separates players more
-than MPR does. The ダーツ Index is the one place the two are combined, and it's
-a rating rather than an average.
+than MPR does. Those five cards carry a small **01 only** tag so nobody reads
+"69.13 avg" as a cricket average. The ダーツ Index is the one place the two are
+combined, and it's a rating rather than an average.
+
+### Tuning the ダーツ Index
+
+The index scores each game out of 100 and averages them 50/50. The two
+references live in `data/config.js`:
+
+```js
+index: {
+  ppd: 60,     // 01 Avg that scores 100
+  mpr: 2.2     // Cricket Avg that scores 100
+}
+```
+
+They have to be **equally hard to reach**, or one game quietly drags everyone
+down. 60 PPD is about 11% above the league's average 01 game, so cricket's
+reference sits the same distance above its own average — 2.20 MPR. (It used to
+be 2.50, which is 26% above the average cricket game, and that made cricket
+score roughly 11 index points lower than 01 for no good reason.)
+
+If the league's standard moves a long way, re-check these. The quick test is
+that the average 01 score and the average cricket score across all players
+should land within a point or two of each other.
 
 
 ## 4b. Backfilling old results (Career averages)

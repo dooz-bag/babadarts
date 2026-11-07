@@ -73,6 +73,20 @@
      leg columns. Raise it only if you also widen the History tab. */
   D.MAX_LEGS = 7;
 
+  /* ------------------------------------------------------ index scaling --- */
+
+  /* The ダーツ Index scores 100 at these two references. They live in
+     config.index so the balance between 01 and cricket can be re-tuned
+     without touching the maths. The defaults are the fallback if the
+     config block is missing. */
+  D.indexRef = function () {
+    var c = (D.config && D.config.index) || {};
+    return {
+      ppd: Number(c.ppd) > 0 ? Number(c.ppd) : 60,
+      mpr: Number(c.mpr) > 0 ? Number(c.mpr) : 2.2
+    };
+  };
+
   /* ------------------------------------------------------ player lookup --- */
 
   D.player = function (id) {
@@ -304,10 +318,12 @@
     out.winPct = out.played ? (out.won / out.played) * 100 : null;
 
     // ダーツ INDEX — one number combining 01 and cricket form.
-    // 60 PPD and 2.50 MPR would score 100.
+    // Both games score 100 at the reference in config.index, which is set so
+    // the two references are equally far above the league's own averages.
     if (out.ppd !== null || out.mpr !== null) {
-      var p = out.ppd !== null ? Math.max(0, out.ppd / 60) : null;
-      var c = out.mpr !== null ? Math.max(0, out.mpr / 2.5) : null;
+      var ref = D.indexRef();
+      var p = out.ppd !== null ? Math.max(0, out.ppd / ref.ppd) : null;
+      var c = out.mpr !== null ? Math.max(0, out.mpr / ref.mpr) : null;
       if (p !== null && c !== null) out.index = (p * 50 + c * 50);
       else out.index = (p !== null ? p : c) * 100;
     }
@@ -700,8 +716,9 @@
       p.winPct = p.played ? (p.won / p.played) * 100 : null;
       p.legDiff = p.legsFor - p.legsAgainst;
       p.deciderPct = p.deciders ? (p.deciderWins / p.deciders) * 100 : null;
-      p.index01 = p.ppdAvg === null ? null : (p.ppdAvg / 60) * 100;
-      p.indexCricket = p.mprAvg === null ? null : (p.mprAvg / 2.5) * 100;
+      var ref = D.indexRef();
+      p.index01 = p.ppdAvg === null ? null : (p.ppdAvg / ref.ppd) * 100;
+      p.indexCricket = p.mprAvg === null ? null : (p.mprAvg / ref.mpr) * 100;
       p.specialistGap = (p.index01 !== null && p.indexCricket !== null)
         ? p.indexCricket - p.index01 : null;
 
@@ -877,8 +894,23 @@
     // Awards switched off in config are dropped here rather than deleted, so
     // turning one back on is a one-word edit and archived seasons follow suit.
     var hidden = (D.config && D.config.awards && D.config.awards.hiddenAwards) || [];
-    if (!hidden.length) return all;
-    return all.filter(function (a) { return hidden.indexOf(a.key) === -1; });
+    var shown = hidden.length
+      ? all.filter(function (a) { return hidden.indexOf(a.key) === -1; })
+      : all;
+
+    /* Which awards only look at 01 legs. The site never blends 01 and
+       cricket into one average, so the cards that do use an average say
+       which one — otherwise "69.13 avg" is ambiguous next to a cricket
+       average. Match-record awards (wins, deciders) need no label. */
+    var basis = {
+      unlucky: "01 only",
+      metronome: "01 only",
+      rollercoaster: "01 only",
+      improved: "01 only",
+      fader: "01 only"
+    };
+    shown.forEach(function (a) { a.basis = basis[a.key] || ""; });
+    return shown;
   };
 
   // This season's awards, from the live match list.

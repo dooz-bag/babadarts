@@ -243,10 +243,14 @@
   function awardCardHtml(award, tint) {
     var icon = AWARD_ICONS[award.key] || "\ud83c\udfc6";
     var colour = tint || "accent";
+    var basis = award.basis
+      ? '<span class="award-basis" title="This award only looks at 01 legs">' +
+        U.esc(award.basis) + '</span>'
+      : "";
     if (!award.winner) {
       return '<div class="award-card tint-' + colour + '">' +
         '<div class="award-head"><span class="award-icon">' + icon + '</span>' +
-        '<span class="award-name">' + U.esc(award.title) + '</span></div>' +
+        '<span class="award-name">' + U.esc(award.title) + '</span>' + basis + '</div>' +
         '<p class="award-blurb">' + U.esc(award.blurb) + '</p>' +
         '<p class="award-empty">Not enough matches yet</p>' +
         '</div>';
@@ -254,7 +258,7 @@
     var p = award.winner.player;
     return '<div class="award-card tint-' + colour + '">' +
       '<div class="award-head"><span class="award-icon">' + icon + '</span>' +
-      '<span class="award-name">' + U.esc(award.title) + '</span></div>' +
+      '<span class="award-name">' + U.esc(award.title) + '</span>' + basis + '</div>' +
       '<p class="award-blurb">' + U.esc(award.blurb) + '</p>' +
       '<div class="award-winner">' +
       '<span class="award-who">' + U.esc(p.flag ? p.flag + " " : "") + U.esc(p.name) + '</span>' +
@@ -451,8 +455,9 @@
       '<p><strong>01 Avg (PPD)</strong> \u2014 points per dart in the ' + U.esc(D.config.rules.game1) +
       ' legs, stats from DARTSLIVE result screen. Higher is better.</p>' +
       '<p><strong>Cricket Avg (MPR)</strong> \u2014 marks per round in cricket.</p>' +
-      '<p><strong>ダーツ Index</strong> \u2014 our single rating combining the two, where a 01 Avg of 60 and a ' +
-      'Cricket Avg of 2.5 would both score 100.</p>' +
+      '<p><strong>ダーツ Index</strong> \u2014 our single rating combining the two, where a 01 Avg of ' +
+      U.num(D.indexRef().ppd, 0) + ' and a Cricket Avg of ' + U.num(D.indexRef().mpr, 2) +
+      ' would both score 100.</p>' +
       '<p class="muted tiny">Tap any column heading to re-sort the table.</p></div>');
 
     var L = D.leaders();
@@ -894,8 +899,9 @@
       '<div class="card card-accent-cool"><h3>What am I looking at?</h3>' +
       '<p><strong>01 Avg (PPD)</strong> — career points per dart in 01 legs across all games.</p>' +
       '<p><strong>Cricket Avg (MPR)</strong> — career marks per round in cricket across all games.</p>' +
-      '<p><strong>ダーツ Index</strong> — our single rating combining the two, where a 01 Avg of 60 and a ' +
-      'Cricket Avg of 2.5 would both score 100.</p>' +
+      '<p><strong>ダーツ Index</strong> — our single rating combining the two, where a 01 Avg of ' +
+      U.num(D.indexRef().ppd, 0) + ' and a Cricket Avg of ' + U.num(D.indexRef().mpr, 2) +
+      ' would both score 100.</p>' +
       '<p class="muted tiny"><strong>* Note on career leaderboards:</strong> A minimum of <strong>5 matches played</strong> is required to qualify for career leader cards. Tap any column heading to re-sort the table. Looking for this season only? Head over to the <a href="league.html#season-stats">League Table</a> page.</p></div>');
 
     /* Roll of honour from the archive (trophy case badges) */
