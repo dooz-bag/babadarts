@@ -780,14 +780,14 @@
     var withTrend = eligible.filter(function (p) { return p.trend !== null; });
     var withBoth = eligible.filter(function (p) { return p.specialistGap !== null; });
 
-    return [
+    var all = [
       pick("unlucky", "Unlucky",
         "A good average, a bad record. The table is lying to them.",
         withPpd,
         function (p) { return p.tablePos - p.ppdRank; },
-        function (v, p) { return D.util.num(p.ppdAvg) + " avg"; },
+        function (v, p) { return D.util.num(p.ppdAvg) + " 01 avg"; },
         function (p) {
-          return ordinal(p.ppdRank) + " best average, " + ordinal(p.tablePos) + " in the table";
+          return ordinal(p.ppdRank) + " best 01 average, " + ordinal(p.tablePos) + " in the table";
         }),
 
       pick("dominance", "Dominance",
@@ -873,6 +873,12 @@
             (p.specialistGap > 0 ? "cricket" : "01");
         })
     ];
+
+    // Awards switched off in config are dropped here rather than deleted, so
+    // turning one back on is a one-word edit and archived seasons follow suit.
+    var hidden = (D.config && D.config.awards && D.config.awards.hiddenAwards) || [];
+    if (!hidden.length) return all;
+    return all.filter(function (a) { return hidden.indexOf(a.key) === -1; });
   };
 
   // This season's awards, from the live match list.

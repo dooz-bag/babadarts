@@ -71,10 +71,11 @@ one-day tournament are different things:
 
 ## Season awards
 
-The League Table page (and every archived season) shows eleven superlatives
-worked out from the results — Unlucky, Dominance, Heartbreak, Clutch, Bottler,
-Metronome, Rollercoaster, Most Improved, Fader, Giant Killer and Specialist.
-Nothing to fill in; see [docs/UPDATING.md](docs/UPDATING.md#4a-season-awards).
+The League Table page (and every archived season) shows superlatives worked out
+from the results — Unlucky, Dominance, Heartbreak, Clutch, Bottler, Metronome,
+Rollercoaster, Most Improved, Fader, Giant Killer and Specialist. Nothing to
+fill in, and any of them can be switched off with `awards.hiddenAwards`; see
+[docs/UPDATING.md](docs/UPDATING.md#4a-season-awards).
 
 ## Run locally
 

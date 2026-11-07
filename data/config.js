@@ -85,9 +85,15 @@ DATSU.config = {
   },
 
   /* ---- SEASON AWARDS --------------------------------------------------
-     minGames stops a two-match cameo winning "most consistent".          */
+     minGames stops a two-match cameo winning "most consistent".
+
+     hiddenAwards switches individual awards off without deleting them, so
+     you can bring one back later by removing it from the list. The award
+     keys are: unlucky, dominance, heartbreak, clutch, bottler, metronome,
+     rollercoaster, improved, fader, giant-killer, specialist.            */
   awards: {
-    minGames: 4
+    minGames: 4,
+    hiddenAwards: ["bottler"]
   },
 
   /* ---- Scoring rules -------------------------------------------------- */

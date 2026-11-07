@@ -228,12 +228,27 @@ Two settings control them, in `data/config.js`:
 
 ```js
 awards: {
-  minGames: 4     // matches needed to qualify for an award
+  minGames: 4,                  // matches needed to qualify for an award
+  hiddenAwards: ["bottler"]     // awards to leave off the site
 }
 ```
 
+`hiddenAwards` switches an award off without deleting it — remove the key from
+the list to bring it back. The keys are `unlucky`, `dominance`, `heartbreak`,
+`clutch`, `bottler`, `metronome`, `rollercoaster`, `improved`, `fader`,
+`giant-killer` and `specialist`. It applies to archived seasons too, so the
+whole site stays consistent.
+
 Forfeited and withdrawn players are excluded automatically — otherwise a 0–2
 forfeit would win "Most Improved".
+
+**A note on averages.** The site never blends 01 and cricket into one number.
+PPD (points per dart) and MPR (marks per round) are different units, so they
+stay in separate columns everywhere. The awards that talk about averages
+(Unlucky, Metronome, Rollercoaster, Most Improved, Fader) use **01 only**,
+because 01 legs are the ones every match has and PPD separates players more
+than MPR does. The ダーツ Index is the one place the two are combined, and it's
+a rating rather than an average.
 
 
 ## 4b. Backfilling old results (Career averages)
