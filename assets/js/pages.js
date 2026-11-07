@@ -1427,7 +1427,8 @@
 
   /* How many legs a knockout match can run to, from the round's format
      string ("Best of 7" -> 7). Falls back to 5, which is what every round
-     uses unless config says otherwise. */
+     uses unless config says otherwise. Capped at D.MAX_LEGS because a
+     best-of-7 is first to 4 and can never reach an eighth leg. */
   function bestOfForRound(mode, code) {
     var rounds;
     if (mode === "tournament") {
@@ -1443,7 +1444,7 @@
     var m = found && String(found.format || "").match(/(\d+)/);
     var n = m ? parseInt(m[1], 10) : 5;
     if (!n || n < 1) n = 5;
-    if (n > 9) n = 9;
+    if (n > D.MAX_LEGS) n = D.MAX_LEGS;
     return n;
   }
 
@@ -1453,7 +1454,7 @@
   }
 
   /* Builds the leg fieldsets. League matches are always best of 3; knockout
-     matches can run to whatever the round's format says (up to best of 9),
+     matches can run to whatever the round's format says (up to D.MAX_LEGS),
      so the form grows and shrinks with the round. */
   function legFieldsHtml(mode, roundCode) {
     var bestOf = mode === "league" ? 3 : bestOfForRound(mode, roundCode);
@@ -2383,12 +2384,12 @@
     return out;
   }
 
-  /* The History tab is 42 columns wide (best of 9, so a best-of-7 final
-     fits); the Matches tab is 16. Getting this wrong is what silently
-     misaligns rows, so it's built in one place. */
+  /* The History tab is sized from D.MAX_LEGS (7 legs, so a best-of-7 final
+     fits); the Matches tab is 16 columns (best of 3). Getting this wrong is
+     what silently misaligns rows, so it's built in one place. */
   function historyRowArray(row, competition) {
     var out = [competition, row.date, row.group || "", row.a, row.b];
-    for (var n = 0; n < 9; n++) {
+    for (var n = 0; n < D.MAX_LEGS; n++) {
       var leg = row.legs[n];
       out.push(leg ? leg.game : "", leg ? leg.winner : "",
         leg && leg.aStat !== null ? leg.aStat : "",
@@ -2405,12 +2406,15 @@
     }).join(",");
   }
 
-  var HISTORY_HEADER = "competition,date,group,playerA,playerB," +
-    "g1game,g1winner,g1a,g1b,g2game,g2winner,g2a,g2b," +
-    "g3game,g3winner,g3a,g3b,g4game,g4winner,g4a,g4b," +
-    "g5game,g5winner,g5a,g5b,g6game,g6winner,g6a,g6b," +
-    "g7game,g7winner,g7a,g7b,g8game,g8winner,g8a,g8b," +
-    "g9game,g9winner,g9a,g9b,round";
+  /* Built from D.MAX_LEGS so the header can never disagree with the rows. */
+  var HISTORY_HEADER = (function () {
+    var cols = ["competition", "date", "group", "playerA", "playerB"];
+    for (var n = 1; n <= D.MAX_LEGS; n++) {
+      cols.push("g" + n + "game", "g" + n + "winner", "g" + n + "a", "g" + n + "b");
+    }
+    cols.push("round");
+    return cols.join(",");
+  })();
 
   /* -------------------------------------------------- the rollover tool --- */
 

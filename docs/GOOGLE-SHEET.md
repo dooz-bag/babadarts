@@ -101,10 +101,10 @@ old data from `data/history.js` by default — see that file for instructions.
 If you'd rather keep it in the same sheet as everything else, add a third tab
 called `History`. Row 1 headers can be:
 
-| `competition` | `date` | `group` | `playerA` | `playerB` | `g1game` | `g1winner` | `g1a` | `g1b` | `g2game` | `g2winner` | `g2a` | `g2b` | `g3game` | `g3winner` | `g3a` | `g3b` | `g4game` | `g4winner` | `g4a` | `g4b` | `g5game` | `g5winner` | `g5a` | `g5b` | `g6game` | `g6winner` | `g6a` | `g6b` | `g7game` | `g7winner` | `g7a` | `g7b` | `g8game` | `g8winner` | `g8a` | `g8b` | `g9game` | `g9winner` | `g9a` | `g9b` | `round` |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-spring | 2026-03-02 | A | alex | yuki | 701 | alex | 23.8 | 21.0 | cricket | yuki | 2.10 | 2.35 | 701 | yuki | 21.5 | 22.9 | | | | | | | | | | | | | | | | | | | | | | | | | |
-| 2026-spring | 2026-04-17 | | alex | yuki | 701 | yuki | 24.0 | 26.0 | cricket | alex | 2.30 | 2.10 | 701 | yuki | 22.0 | 24.0 | cricket | yuki | 2.20 | 2.50 | | | | | | | | | | | | | | | | | | | | | final |
+| `competition` | `date` | `group` | `playerA` | `playerB` | `g1game` | `g1winner` | `g1a` | `g1b` | `g2game` | `g2winner` | `g2a` | `g2b` | `g3game` | `g3winner` | `g3a` | `g3b` | `g4game` | `g4winner` | `g4a` | `g4b` | `g5game` | `g5winner` | `g5a` | `g5b` | `g6game` | `g6winner` | `g6a` | `g6b` | `g7game` | `g7winner` | `g7a` | `g7b` | `round` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-spring | 2026-03-02 | A | alex | yuki | 701 | alex | 23.8 | 21.0 | cricket | yuki | 2.10 | 2.35 | 701 | yuki | 21.5 | 22.9 | | | | | | | | | | | | | | | | |
+| 2026-spring | 2026-04-17 | | alex | yuki | 701 | yuki | 24.0 | 26.0 | cricket | alex | 2.30 | 2.10 | 701 | yuki | 22.0 | 24.0 | cricket | yuki | 2.20 | 2.50 | | | | | | | | | | | | | final |
 
 A ready-made example is in [`data/history-example.csv`](../data/history-example.csv) —
 open it, copy the rows into the `History` tab, then overwrite them with your
@@ -128,8 +128,10 @@ A couple of things that apply to this tab:
 - **Averages optional**: If PPD / MPR was not recorded for a leg, leave `g1a`, `g1b`
   blank — the leg winner and match win/loss will still be fully counted toward points
   and standings.
-- **Supports up to 9 legs**: `g1` through `g9`, so a best-of-7 playoff final
-  fits. The Matches tab stays at 3 legs (best of 3); only History goes wider.
+- **Supports up to 7 legs**: `g1` through `g7`, so a best-of-7 playoff final
+  fits. A best-of-7 is first to 4, so seven legs is the most a match can ever
+  run — there is no leg 8. The Matches tab stays at 3 legs (best of 3); only
+  History goes wider.
 - Publish this tab the same way (**File → Share → Publish to web** →
   pick `History` → CSV → Publish), then paste the link into `historyCsvUrl`
   in `data/config.js`:

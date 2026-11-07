@@ -39,8 +39,13 @@ var PASSCODE = "changeme";
 
 var SHEET_NAMES = { matches: "Matches", history: "History" };
 
-// The Matches tab is 16 columns (best of 3); the History tab is 42 (best of
-// 9, so a best-of-7 playoff final fits). Writing a 16-column row into History
+// The most legs a single match can ever have. A best-of-7 is first to 4, so
+// seven is the ceiling — there is no leg 8. Raise this only if you also widen
+// the History tab to match.
+var MAX_LEGS = 7;
+
+// The Matches tab is 16 columns (best of 3); the History tab is 34 (best of
+// 7, so a best-of-7 playoff final fits). Writing a 16-column row into History
 // silently misaligns every column after `playerB`, so the two shapes are
 // built separately and never mixed up.
 var MATCHES_HEADER = ["date", "group", "playerA", "playerB",
@@ -48,6 +53,8 @@ var MATCHES_HEADER = ["date", "group", "playerA", "playerB",
   "g2game", "g2winner", "g2a", "g2b",
   "g3game", "g3winner", "g3a", "g3b"];
 
+// A best-of-7 is first to 4, so seven legs is the most a match can ever run.
+// There is no leg 8.
 var HISTORY_HEADER = ["competition", "date", "group", "playerA", "playerB",
   "g1game", "g1winner", "g1a", "g1b",
   "g2game", "g2winner", "g2a", "g2b",
@@ -56,8 +63,6 @@ var HISTORY_HEADER = ["competition", "date", "group", "playerA", "playerB",
   "g5game", "g5winner", "g5a", "g5b",
   "g6game", "g6winner", "g6a", "g6b",
   "g7game", "g7winner", "g7a", "g7b",
-  "g8game", "g8winner", "g8a", "g8b",
-  "g9game", "g9winner", "g9a", "g9b",
   "round"];
 
 function doPost(e) {
@@ -84,6 +89,14 @@ function doPost(e) {
 function appendResult(body) {
   if (!body.date || !body.a || !body.b || !body.legs || !body.legs.length) {
     return respond({ ok: false, error: "Missing some required fields." });
+  }
+
+  if (body.legs.length > MAX_LEGS) {
+    return respond({
+      ok: false,
+      error: "That result has " + body.legs.length + " legs, but a match can only have " +
+        MAX_LEGS + ". Check the form and try again."
+    });
   }
 
   var isHistory = body.target === "history";
@@ -121,7 +134,7 @@ function historyValues(competition, date, group, a, b, legs, round) {
     competition: competition, date: date, group: group || "",
     playera: a, playerb: b, round: round || ""
   };
-  for (var i = 0; i < 9; i++) {
+  for (var i = 0; i < MAX_LEGS; i++) {
     var leg = legs[i], n = i + 1;
     v["g" + n + "game"] = leg ? leg.game : "";
     v["g" + n + "winner"] = leg ? leg.winner : "";

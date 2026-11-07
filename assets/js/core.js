@@ -64,6 +64,15 @@
     }
   };
 
+  /* ------------------------------------------------------- leg ceiling --- */
+
+  /* The widest match the site can store. A best-of-7 is first to 4, so it
+     can never run past seven legs — there is no such thing as leg 8. This
+     is the single source of truth: the History tab is sized from it, the
+     submit form is capped by it, and the CSV parser reads exactly this many
+     leg columns. Raise it only if you also widen the History tab. */
+  D.MAX_LEGS = 7;
+
   /* ------------------------------------------------------ player lookup --- */
 
   D.player = function (id) {
@@ -1492,22 +1501,22 @@
   }
 
   // Shared by the Matches tab and the History tab.
-  // Supports up to 9 legs (g1 through g9), so a best-of-7 playoff final fits.
-  // History tab can also optionally include:
+  // Reads up to D.MAX_LEGS legs (g1 through g7), which covers a best-of-7
+  // playoff final. History tab can also optionally include:
   //   - `competition` / `season`: matches an archive item ID (e.g. "2026-spring")
   //   - `round`: "quarter", "semi", "final", "r1", "r16" ... (blank = regular season)
   function rowsToMatches(objs) {
     return objs.map(function (r) {
       var legs = [];
-      [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(function (n) {
+      for (var n = 1; n <= D.MAX_LEGS; n++) {
         var g = r["g" + n + "game"], w = r["g" + n + "winner"];
-        if (!w) return;
+        if (!w) continue;
         g = g ? String(g).trim() : "leg";
         legs.push({
           game: g.toLowerCase(), winner: w,
           aStat: numOrNull(r["g" + n + "a"]), bStat: numOrNull(r["g" + n + "b"])
         });
-      });
+      }
       return {
         date: r.date, group: (r.group || "").toUpperCase(),
         competition: (r.competition || r.season || r.comp || "").trim(),
