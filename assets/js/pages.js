@@ -170,11 +170,27 @@
 
   function bracketSideHtml(s) {
     if (!s) return '<div class="side pending"><span class="nm">TBC</span></div>';
+
+    /* One bubble per leg, in the order they were played. A 3–2 that went
+       ●○●○● reads as exactly that, so you can see the shape of the match
+       rather than just the final count. Only shown once a tie is played. */
+    var bubbles = "";
+    if (s.legs && s.legs.length) {
+      var out = "";
+      for (var i = 0; i < s.legs.length; i++) {
+        out += '<span class="bub' + (s.legs[i] ? ' is-won' : '') + '"></span>';
+      }
+      var won = s.legs.filter(Boolean).length;
+      bubbles = '<span class="bubs" aria-label="' + won + ' of ' + s.legs.length +
+        ' legs, in order">' + out + '</span>';
+    }
+
     return '<div class="side' + (s.pending ? ' pending' : '') + (s.won ? ' win' : '') + '">' +
       '<span class="nm">' +
       (s.label ? '<span class="seed">' + U.esc(s.label) + '</span>' : '') +
       U.esc(s.flag ? s.flag + " " : "") + U.esc(s.name) +
       '</span>' +
+      bubbles +
       '<span class="mono">' + (s.score === undefined ? '' : U.esc(s.score)) + '</span>' +
       '</div>';
   }

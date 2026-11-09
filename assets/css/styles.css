@@ -912,6 +912,32 @@ a.honour-badge.league:hover {
 .tie .side.pending .nm { color: var(--dim); font-style: italic; }
 .tie .side.win { background: rgba(106, 145, 105, 0.14); }
 .tie .side.win .nm { color: var(--text); font-weight: 600; }
+
+/* One bubble per leg, in the order they were played. A 3–2 that went
+   ●○●○● reads as exactly that, so the shape of the match is visible at a
+   glance. Sized to fit seven (a best-of-7 final) without crowding the name. */
+.tie .side .bubs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: 7px;
+  flex: none;
+}
+.tie .side .bub {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  display: block;
+}
+.tie .side .bub.is-won {
+  background: var(--accent-good);
+  border-color: var(--accent-good);
+  box-shadow: 0 0 5px -1px var(--accent-good);
+}
+.tie .side.win .bub.is-won { box-shadow: 0 0 7px 0 var(--accent-good); }
 .tie .fmt {
   display: flex;
   justify-content: space-between;

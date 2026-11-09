@@ -1084,18 +1084,28 @@
         tie.match = m;
         tie.home.score = s.a;
         tie.away.score = s.b;
+
+        /* A bubble per leg, in the order they were played, so a 3–2 that
+           went ●○●○● reads as exactly that rather than "three wins". Each
+           entry is true when that side took the leg. */
+        var legs = m.legs || [];
+        tie.home.legs = legs.map(function (l) { return l.winner === tie.home.id; });
+        tie.away.legs = legs.map(function (l) { return l.winner === tie.away.id; });
+
         if (s.a > s.b) { tie.home.won = true; tie.winner = tie.home; }
         else if (s.b > s.a) { tie.away.won = true; tie.winner = tie.away; }
       });
     }
 
-    /* Whoever comes out of a tie and into the next round. */
+    /* Whoever comes out of a tie and into the next round. Returns a fresh
+       object rather than the tie's own side, so a result's score and leg
+       bubbles stay with the round they were played in instead of following
+       the player down the bracket. */
     function advancing(tie) {
       if (!tie || tie.kind === "empty") return null;
-      // A bye passes its player straight through to the next round.
-      if (tie.kind === "bye") return tie.home;
-      if (tie.winner) return tie.winner;
-      return { label: "", name: "Winner " + tie.id, id: null, flag: "", pending: true };
+      var from = tie.kind === "bye" ? tie.home : tie.winner;
+      if (!from) return { label: "", name: "Winner " + tie.id, id: null, flag: "", pending: true };
+      return { label: from.label, name: from.name, id: from.id, flag: from.flag, outlook: from.outlook };
     }
 
     /* --- first round: walk the slot order two slots at a time -----------
