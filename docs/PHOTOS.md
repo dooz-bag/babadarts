@@ -61,100 +61,21 @@ row in row 1:
 
 ## Step 3 — Add the script
 
-If you already have the results script from
-[docs/SUBMIT-RESULTS.md](SUBMIT-RESULTS.md), you don't need a second one —
-paste these additions into the same project. If you don't, create a fresh
-Apps Script from **Extensions → Apps Script** and paste the whole block below.
+The complete script — results, photos and rollover in one deployment — lives
+in **[APPS-SCRIPT.md](APPS-SCRIPT.md)**. Paste that in, set `PASSCODE` and
+`PHOTO_FOLDER_ID`, and deploy. Come back here for the Photos tab shape and
+how moderation works.
+
+The photo-specific settings in that script are:
 
 ```js
-// ---------------------------------------------------------------- photos ---
-
-// The Drive folder from step 1.
-var PHOTO_FOLDER_ID = "PASTE_YOUR_FOLDER_ID_HERE";
-
-var PHOTOS_SHEET = "Photos";
-var PHOTOS_HEADER = ["url", "caption", "season", "credit", "date", "status"];
-
-// Set false to publish uploads immediately instead of holding them for review.
-var PHOTO_MODERATION = true;
-
-// Roughly 8MB of base64. The browser shrinks photos to ~1600px before
-// sending, so a normal phone photo lands well under this.
-var MAX_PHOTO_BYTES = 8 * 1024 * 1024;
-
-function appendPhoto(body) {
-  if (!body.image) {
-    return respond({ ok: false, error: "No image came through." });
-  }
-  if (body.image.length > MAX_PHOTO_BYTES) {
-    return respond({ ok: false, error: "That photo is too big even after shrinking. Try a smaller one." });
-  }
-
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PHOTOS_SHEET);
-  if (!sheet) {
-    return respond({ ok: false, error: "Can't find a \"" + PHOTOS_SHEET + "\" tab in this sheet." });
-  }
-
-  var folder = DriveApp.getFolderById(PHOTO_FOLDER_ID);
-  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd-HHmmss");
-  var safeCaption = String(body.caption || "photo").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 40);
-  var name = stamp + "-" + (safeCaption || "photo") + ".jpg";
-
-  var blob = Utilities.newBlob(
-    Utilities.base64Decode(body.image),
-    body.mime || "image/jpeg",
-    name
-  );
-  var file = folder.createFile(blob);
-
-  // Anyone with the link can view, so the site can show it without a login.
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-  // lh3.googleusercontent.com serves the raw bytes and is far more reliable
-  // for hotlinking than drive.google.com/uc?id=…, which redirects and
-  // sometimes returns an HTML interstitial instead of the image.
-  var url = "https://lh3.googleusercontent.com/d/" + file.getId();
-
-  var values = {
-    url: url,
-    caption: String(body.caption || "").slice(0, 140),
-    season: String(body.season || ""),
-    credit: String(body.credit || "").slice(0, 60),
-    date: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
-    status: PHOTO_MODERATION ? "pending" : "approved"
-  };
-
-  var row = rowForSheet(sheet, values, PHOTOS_HEADER);
-  if (row.error) return respond({ ok: false, error: row.error });
-
-  sheet.appendRow(row.values);
-  return respond({ ok: true, url: url });
-}
+var PHOTO_FOLDER_ID = "PASTE_YOUR_FOLDER_ID_HERE";  // the folder from step 1
+var PHOTO_MODERATION = true;                        // false = publish instantly
+var MAX_PHOTO_BYTES = 8 * 1024 * 1024;              // ~8MB of base64
 ```
 
-Then hook it into `doPost` — find the existing `doPost` and add one line:
-
-```js
-function doPost(e) {
-  try {
-    var body = JSON.parse(e.postData.contents);
-
-    if (String(body.passcode || "") !== PASSCODE) {
-      return respond({ ok: false, error: "Wrong passcode." });
-    }
-
-    var action = String(body.action || "result");
-
-    if (action === "photo") return appendPhoto(body);   // <-- add this
-    if (action === "preview") return previewRollover(body);
-    if (action === "rollover") return commitRollover(body);
-
-    return appendResult(body);
-  } catch (err) {
-    return respond({ ok: false, error: "Server error: " + err.message });
-  }
-}
-```
+`doPost` in that script already routes `action: "photo"` to `appendPhoto`, so
+there's nothing to wire up by hand.
 
 ## Step 4 — Grant the Drive permission
 

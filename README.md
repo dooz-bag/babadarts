@@ -106,10 +106,14 @@ a published Google Sheet instead of the data files — with an automatic fallbac
 to the local files if the sheet is ever unavailable.
 See [docs/GOOGLE-SHEET.md](docs/GOOGLE-SHEET.md). Entirely optional.
 
-On top of that, [docs/SUBMIT-RESULTS.md](docs/SUBMIT-RESULTS.md) wires up
-`submit.html` — a form so anyone with a shared passcode can log a result
-straight into that sheet from their phone, no editing files at all. Also
-entirely optional, and built on whatever the Google Sheet guide already set up.
+On top of that, [docs/APPS-SCRIPT.md](docs/APPS-SCRIPT.md) has the Google Apps
+Script that powers the two phone forms — `submit.html` for results and
+`photos.html` for photos — both writing into that sheet. One deployment
+handles both. Also entirely optional, and built on whatever the Google Sheet
+guide already set up.
+
+- [docs/SUBMIT-RESULTS.md](docs/SUBMIT-RESULTS.md) — how the result form behaves
+- [docs/PHOTOS.md](docs/PHOTOS.md) — the Photos tab, Drive folder and moderation
 
 ## Project structure
 
