@@ -189,7 +189,39 @@ DATSU.config = {
     enabled: true,
     playersCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=0&single=true&output=csv",
     matchesCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=958369008&single=true&output=csv",
-    historyCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=1630828027&single=true&output=csv"
+    historyCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=1630828027&single=true&output=csv",
+    /* The Photos tab — approved photos only. Leave blank to use the local
+       list in data/photos.js instead. See docs/PHOTOS.md. */
+    photosCsvUrl: ""
+  },
+
+  /* ---- PHOTOS ---------------------------------------------------------
+     The carousel on the home page and on archived seasons.
+
+     submitUrl   the Apps Script "Web app" URL. Leave it blank and the
+                 Photo Submission page just explains how to set it up.
+                 It can be the same URL as resultsForm.submitUrl — one
+                 script handles both, see docs/PHOTOS.md.
+
+     moderation  true  = uploads land in the Photos tab marked "pending"
+                         and don't appear on the site until you flip them
+                         to "approved"
+                 false = uploads go live immediately
+
+     maxUploadMb how big a single photo is allowed to be, before the
+                 browser shrinks it. Anything over ~2MB gets resized
+                 client-side anyway, so this is mostly a sanity limit.  */
+  photos: {
+    submitUrl: "",
+    moderation: true,
+    maxUploadMb: 12,
+    /* Shown on the home page carousel. These are the bar photos; the
+       archive galleries use each season's own list. */
+    home: [
+      { src: "assets/img/hub/board.jpg", caption: "Our board. Hers now, apparently." },
+      { src: "assets/img/hub/bar.jpg", caption: "The bar. Scene of many excuses." },
+      { src: "assets/img/hub/league-night.jpg", caption: "A normal Tuesday." }
+    ]
   },
 
   /* ---- SUBMIT A RESULT (optional — see docs/SUBMIT-RESULTS.md) --------

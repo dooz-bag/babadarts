@@ -422,13 +422,11 @@
       leaderCard("Best cricket average", L.bestCricket, "Cricket Avg") +
       leaderCard("Best overall index", L.bestOverall, "ダーツ Index", null, "accent-violet"));
 
-    /* Photos of the bar. Drop real files into assets/img/hub/ to replace
-       the placeholders — the file names are shown on screen. */
-    set("hub-photos", [
-      { src: "assets/img/hub/board.jpg", caption: "Our board. Hers now, apparently." },
-      { src: "assets/img/hub/bar.jpg", caption: "The bar. Scene of many excuses." },
-      { src: "assets/img/hub/league-night.jpg", caption: "A normal Tuesday." }
-    ].map(D.photoHtml).join(""));
+    /* Photos of the bar, as a carousel. Drop real files into assets/img/hub/
+       to replace the placeholders — the file names are shown on screen.
+       Once the Photos tab is wired up these come from there instead. */
+    set("hub-photos", D.carouselHtml(D.allPhotos(), { id: "home-carousel", label: "Photos from the bar" }));
+    D.wireCarousels();
   };
 
   /* =========================================================== LEAGUE === */
@@ -1305,14 +1303,17 @@
         '</div>';
     }
 
-    if (a.photos && a.photos.length) {
-      html += '<div class="section"><h2>Photos</h2><div class="gallery">' +
-        a.photos.map(D.photoHtml).join("") + '</div></div>';
+    var seasonPhotos = D.photosForSeason ? D.photosForSeason(a) : (a.photos || []);
+    if (seasonPhotos.length) {
+      html += '<div class="section"><h2>Photos</h2>' +
+        D.carouselHtml(seasonPhotos, { id: "season-carousel", label: a.name + " photos" }) +
+        '</div>';
     }
 
     html += '<p style="margin-top:26px"><a class="btn btn-quiet" href="archive.html">\u2190 Back to the archive</a></p>';
 
     set("season-body", html);
+    D.wireCarousels();
   };
 
   /* ============================================================= JOIN === */
@@ -2315,6 +2316,238 @@
     }
     set("submit-body", submitFormHtml());
     wireSubmitForm(cfg.submitUrl);
+  };
+
+  /* =========================================================== PHOTOS === */
+
+  function photoSetupCardHtml() {
+    return '<div class="card card-accent-warm">' +
+      '<h3 class="accent-warm">Not wired up yet</h3>' +
+      '<p>Photo uploads need the Google Apps Script from ' +
+      '<a href="docs/PHOTOS.md">docs/PHOTOS.md</a> deployed, then its URL pasted into ' +
+      '<code>photos.submitUrl</code> in <code>data/config.js</code>.</p>' +
+      '<p class="muted tiny">Until then, photos can be added by hand: drop the file into ' +
+      '<code>assets/img/hub/</code> and list it under <code>photos.home</code> in the config, ' +
+      'or add it to the Photos tab of the sheet.</p>' +
+      '</div>';
+  }
+
+  function photoFormHtml() {
+    var cfg = D.config.photos || {};
+    var maxMb = cfg.maxUploadMb || 12;
+    var seasons = (D.archiveVisible ? D.archiveVisible() : (D.archive || [])).map(function (a) {
+      return '<option value="' + U.esc(a.id) + '">' + U.esc(a.name) + '</option>';
+    }).join("");
+
+    return '<div id="photo-form-wrap">' +
+      '<form class="card" id="photo-form" novalidate>' +
+      '<div class="field">' +
+      '<label for="pf-file">The photo</label>' +
+      '<input type="file" id="pf-file" accept="image/*" required />' +
+      '<p class="muted tiny">Up to ' + maxMb + 'MB. Big ones get shrunk in your browser before ' +
+      'they\'re sent, so a phone photo is fine.</p>' +
+      '</div>' +
+
+      '<div class="field">' +
+      '<label for="pf-caption">Caption <span class="muted">(optional)</span></label>' +
+      '<input type="text" id="pf-caption" maxlength="140" placeholder="Martin, mid-excuse." />' +
+      '</div>' +
+
+      '<div class="field">' +
+      '<label for="pf-season">Which season is it from? <span class="muted">(optional)</span></label>' +
+      '<select id="pf-season"><option value="">Just the home page</option>' + seasons + '</select>' +
+      '</div>' +
+
+      '<div class="field">' +
+      '<label for="pf-credit">Who took it? <span class="muted">(optional)</span></label>' +
+      '<input type="text" id="pf-credit" maxlength="60" placeholder="Your name" />' +
+      '</div>' +
+
+      '<div class="field">' +
+      '<label for="pf-passcode">League passcode</label>' +
+      '<input type="password" id="pf-passcode" autocomplete="off" required />' +
+      '<p class="muted tiny">Same one as the results form.</p>' +
+      '</div>' +
+
+      '<div id="pf-preview" class="photo-preview"></div>' +
+      '<div id="pf-msg"></div>' +
+
+      '<div class="btn-row">' +
+      '<button type="submit" class="btn" id="pf-submit">Send it in</button>' +
+      '</div>' +
+      '</form>' +
+      '</div>';
+  }
+
+  function photoSuccessCardHtml() {
+    var moderated = (D.config.photos && D.config.photos.moderation) !== false;
+    return '<div class="card card-accent-good">' +
+      '<h3 class="accent-good">Got it \u2014 thanks</h3>' +
+      '<p>' + (moderated
+        ? 'It\'s in the sheet waiting to be approved. Once it\'s been looked at it\'ll show up ' +
+          'in the carousel on the home page.'
+        : 'It\'s in the sheet and should appear in the carousel shortly.') + '</p>' +
+      '<p class="muted tiny">Google caches published sheets for a few minutes, so give it a ' +
+      'moment before refreshing.</p>' +
+      '<div class="btn-row">' +
+      '<button type="button" class="btn btn-quiet" id="pf-another">Send another</button>' +
+      '<a class="btn btn-quiet" href="index.html">Back to the home page</a>' +
+      '</div>' +
+      '</div>';
+  }
+
+  /* Shrinks a photo in the browser before upload. A modern phone photo is
+     3–6MB; at 1600px and quality 0.82 it lands around 250–400KB, which keeps
+     the Apps Script request well inside its limits and the site quick. */
+  function shrinkPhoto(file, maxDimension, callback) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var canvas = document.createElement("canvas");
+        var width = img.width, height = img.height;
+        if (width > height) {
+          if (width > maxDimension) { height = Math.round((height * maxDimension) / width); width = maxDimension; }
+        } else {
+          if (height > maxDimension) { width = Math.round((width * maxDimension) / height); height = maxDimension; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        callback(null, {
+          dataUrl: dataUrl,
+          base64: dataUrl.split(",")[1],
+          width: width,
+          height: height
+        });
+      };
+      img.onerror = function () { callback(new Error("That file doesn't look like an image.")); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function () { callback(new Error("Couldn't read that file.")); };
+    reader.readAsDataURL(file);
+  }
+
+  function wirePhotoForm(submitUrl) {
+    var form = $("photo-form");
+    if (!form) return;
+
+    var fileInput = $("pf-file");
+    var preview = $("pf-preview");
+    var msg = $("pf-msg");
+    var btn = $("pf-submit");
+
+    function showMsg(kind, text) {
+      if (!msg) return;
+      msg.className = text ? ("form-msg is-" + kind) : "form-msg";
+      msg.textContent = text;
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener("change", function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file || !preview) return;
+        var maxMb = (D.config.photos && D.config.photos.maxUploadMb) || 12;
+        if (file.size > maxMb * 1024 * 1024) {
+          showMsg("err", "That's " + (file.size / 1024 / 1024).toFixed(1) + "MB \u2014 the limit is " + maxMb + "MB.");
+          preview.innerHTML = "";
+          return;
+        }
+        showMsg("", "");
+        var url = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + url + '" alt="Preview" />' +
+          '<p class="muted tiny">' + U.esc(file.name) + ' \u00b7 ' +
+          (file.size / 1024).toFixed(0) + 'KB</p>';
+      });
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      var file = fileInput && fileInput.files && fileInput.files[0];
+      if (!file) { showMsg("err", "Pick a photo first."); return; }
+
+      var passcode = ($("pf-passcode") || {}).value || "";
+      if (!passcode) { showMsg("err", "The passcode is needed too."); return; }
+
+      btn.disabled = true;
+      btn.textContent = "Shrinking and sending\u2026";
+      showMsg("pending", "Compressing the photo, then posting it to the sheet\u2026");
+
+      shrinkPhoto(file, 1600, function (err, out) {
+        if (err) {
+          btn.disabled = false;
+          btn.textContent = "Send it in";
+          showMsg("err", err.message);
+          return;
+        }
+
+        var payload = {
+          action: "photo",
+          passcode: passcode,
+          image: out.base64,
+          mime: "image/jpeg",
+          caption: ($("pf-caption") || {}).value || "",
+          season: ($("pf-season") || {}).value || "",
+          credit: ($("pf-credit") || {}).value || "",
+          width: out.width,
+          height: out.height
+        };
+
+        var opts = {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        };
+
+        var timeoutId = setTimeout(function () {
+          btn.disabled = false;
+          btn.textContent = "Retry";
+          showMsg("warn", "No answer after 45 seconds. Big photos on pub Wi-Fi are slow \u2014 " +
+            "check the sheet before sending it again.");
+        }, 45000);
+
+        fetch(submitUrl, opts)
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            clearTimeout(timeoutId);
+            if (res && res.ok) {
+              var wrap = $("photo-form-wrap");
+              if (wrap) {
+                wrap.innerHTML = photoSuccessCardHtml();
+                var another = $("pf-another");
+                if (another) {
+                  another.addEventListener("click", function () {
+                    wrap.outerHTML = photoFormHtml();
+                    wirePhotoForm(submitUrl);
+                  });
+                }
+              }
+            } else {
+              btn.disabled = false;
+              btn.textContent = "Send it in";
+              showMsg("err", (res && res.error) || "The sheet said no \u2014 check the passcode.");
+            }
+          })
+          .catch(function () {
+            clearTimeout(timeoutId);
+            btn.disabled = false;
+            btn.textContent = "Retry";
+            showMsg("err", "Couldn't reach the sheet. Check your connection and try again.");
+          });
+      });
+    });
+  }
+
+  D.pages.photos = function () {
+    var cfg = D.config.photos || {};
+    if (!cfg.submitUrl) {
+      set("photo-body", photoSetupCardHtml());
+      return;
+    }
+    set("photo-body", photoFormHtml());
+    wirePhotoForm(cfg.submitUrl);
   };
 
   /* ============================================================ ADMIN === */

@@ -27,6 +27,7 @@ It's written for someone who has never opened a code file before.
 | `archive.html` | Every past league and tournament |
 | `season.html` | One reusable page that renders *any* archived season |
 | `submit.html` | Optional phone-friendly form to log a result straight into the Google Sheet |
+| `photos.html` | Optional phone-friendly form to send in a photo — uploads to Drive, waits for approval |
 | `join.html` | How to join, where we are, how to reach us on LINE |
 | `admin.html` | Once-a-season tools: roll the season over into History, and finalize the bracket |
 
@@ -42,6 +43,7 @@ data/history.js           past results, so "Career averages" covers every season
 data/history-example.csv  template for bulk-adding old results (by hand or via a Google Sheet)
 data/archive.js           past leagues and tournaments
 data/playoffs.js          optional frozen playoff seeds (see admin.html)
+data/photos.js            local photo list, used when the Photos tab isn't wired up
 ```
 
 The league table, every average, the records and the playoff bracket are all

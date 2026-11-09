@@ -1677,6 +1677,72 @@
       });
   }
 
+  /* ------------------------------------------------------------- photos --- */
+
+  /* Photos come from the "Photos" tab when sheet.photosCsvUrl is set, and
+     from data/photos.js otherwise. Only rows marked approved are shown —
+     the moderation switch in config decides whether new uploads start
+     approved or pending, but the site never trusts that: it filters here. */
+  function normalisePhoto(r) {
+    var src = String(r.url || r.src || "").trim();
+    if (!src) return null;
+    return {
+      src: src,
+      caption: String(r.caption || "").trim(),
+      season: String(r.season || r.competition || "").trim(),
+      date: String(r.date || "").trim(),
+      credit: String(r.credit || r.by || "").trim()
+    };
+  }
+
+  function loadPhotos(url) {
+    return get(url)
+      .then(function (text) {
+        var rows = toObjects(parseCsv(text));
+        D.photos = rows
+          .filter(function (r) {
+            var status = String(r.status || r.approved || "approved").trim().toLowerCase();
+            return status !== "pending" && status !== "rejected" && status !== "no" && status !== "false";
+          })
+          .map(normalisePhoto)
+          .filter(Boolean);
+        D.photosSource = "sheet";
+        return true;
+      })
+      .catch(function (err) {
+        console.warn("[DATSU] Photos sheet load failed, using data/photos.js instead.", err);
+        D.photosSource = "local-fallback";
+        return false;
+      });
+  }
+
+  /* Every photo we know about, newest first. Local entries and sheet rows
+     are the same shape, so callers don't care which they got. */
+  D.allPhotos = function () {
+    var list = (D.photos && D.photos.length ? D.photos : (D.config.photos && D.config.photos.home) || [])
+      .slice();
+    return list.sort(function (x, y) {
+      if (x.date && y.date && x.date !== y.date) return x.date < y.date ? 1 : -1;
+      if (x.date && !y.date) return -1;
+      if (!x.date && y.date) return 1;
+      return 0;
+    });
+  };
+
+  /* Photos for one archived season. Falls back to the season's own list in
+     data/archive.js when the sheet has nothing tagged for it. */
+  D.photosForSeason = function (itemOrId) {
+    var a = typeof itemOrId === "string" ? D.archiveItem(itemOrId) : itemOrId;
+    if (!a) return [];
+    function key(s) { return String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, ""); }
+    var target = key(a.id);
+    var tagged = D.allPhotos().filter(function (p) { return key(p.season) === target; });
+    if (tagged.length) return tagged;
+    return (a.photos || []).map(function (p) {
+      return { src: p.src, caption: p.caption || "", season: a.id, date: "" };
+    });
+  };
+
   D.loadFromSheet = function () {
     var s = D.config.sheet || {};
     var canFetch = typeof fetch === "function";
@@ -1689,9 +1755,14 @@
       ? loadHistory(s.historyCsvUrl)
       : Promise.resolve(false);
 
-    return Promise.all([mainTask, historyTask]).then(function (res) { return res[0]; });
+    var photosTask = (canFetch && s.photosCsvUrl)
+      ? loadPhotos(s.photosCsvUrl)
+      : Promise.resolve(false);
+
+    return Promise.all([mainTask, historyTask, photosTask]).then(function (res) { return res[0]; });
   };
 
   D.dataSource = "local";
   D.historySource = "local";
+  D.photosSource = "local";
 })();

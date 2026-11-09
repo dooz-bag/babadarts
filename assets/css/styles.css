@@ -921,6 +921,89 @@ a.honour-badge.league:hover {
 .photo-missing .big { font-family: var(--font-head); font-size: 1.6rem; color: var(--line-2); }
 .photo-missing code { color: var(--accent-cool); word-break: break-all; font-size: 0.72rem; font-family: var(--font-mono); }
 
+/* ------------------------------------------------------------ CAROUSEL ---
+   A scroll-snap track rather than a JS slider: swipe, momentum and
+   keyboard scrolling all come free from the browser, and it degrades to a
+   plain horizontal strip if the script never runs. */
+.carousel { position: relative; }
+.car-viewport { overflow: hidden; border-radius: var(--radius); }
+.car-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.car-track::-webkit-scrollbar { display: none; }
+.car-track:focus-visible { outline: 2px solid var(--accent-cool); outline-offset: 3px; }
+
+.car-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel);
+}
+.car-slide .shot-btn { display: block; width: 100%; padding: 0; border: none; background: none; cursor: zoom-in; line-height: 0; }
+.car-slide img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s ease;
+}
+.car-slide .shot-btn:hover img,
+.car-slide .shot-btn:focus-visible img { opacity: 0.92; }
+.car-slide figcaption { padding: 11px 14px; font-size: 0.86rem; color: var(--muted); }
+.car-slide .photo-missing { aspect-ratio: 16 / 9; }
+
+.car-arrow {
+  position: absolute;
+  top: calc(50% - 26px);
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: rgba(18, 21, 26, 0.82);
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.car-arrow:hover:not(:disabled) { background: rgba(30, 35, 42, 0.95); border-color: var(--accent-cool); }
+.car-arrow:disabled { opacity: 0.28; cursor: default; }
+.car-prev { left: 10px; }
+.car-next { right: 10px; }
+
+.car-dots { display: flex; justify-content: center; gap: 7px; margin-top: 12px; }
+.car-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--line-2);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.car-dot:hover { background: var(--muted); }
+.car-dot.is-active { background: var(--accent-cool); transform: scale(1.25); }
+
+@media (max-width: 620px) {
+  .car-arrow { width: 34px; height: 34px; font-size: 1.25rem; top: calc(50% - 30px); }
+  .car-prev { left: 6px; }
+  .car-next { right: 6px; }
+}
+
 /* --- LIGHTBOX (popping out full images without cropping) ------------- */
 body.lightbox-locked { overflow: hidden; }
 
@@ -1373,6 +1456,17 @@ body.lightbox-locked { overflow: hidden; }
 .form-msg.is-ok   { color: var(--accent-good); }
 .form-msg.is-pending { color: var(--muted); }
 .form-msg.is-warn { color: var(--accent-warm); }
+
+/* Photo submission preview */
+.photo-preview { margin: 4px 0 0; }
+.photo-preview img {
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  display: block;
+}
+.photo-preview p { margin: 7px 0 0; }
 #resultForm .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* Matchup / already-played notice under player selectors */

@@ -65,6 +65,139 @@
       '</figure>';
   };
 
+  /* ------------------------------------------------------------ carousel --- */
+
+  /* A horizontal scroll-snap track. No library, no auto-advance — the
+     arrows and dots just scroll the track, and the browser handles swipe
+     and momentum for free. Clicking a photo still opens the lightbox,
+     because the slides reuse .shot-btn. */
+  D.carouselHtml = function (photos, opts) {
+    opts = opts || {};
+    var list = (photos || []).filter(function (p) { return p && p.src; });
+    if (!list.length) return "";
+
+    var id = opts.id || ("car-" + Math.random().toString(36).slice(2, 8));
+    var label = opts.label || "Photos";
+
+    var slides = list.map(function (p, i) {
+      var rawSrc = p.src || "";
+      var src = rawSrc.indexOf("/") === -1 ? ("assets/img/archive/" + rawSrc) : rawSrc;
+      var escSrc = U.esc(src);
+      var cap = U.esc(p.caption || "");
+      var fallback =
+        '<div class=\'photo-missing\'>' +
+        '<div class=\'big\'>◎</div>' +
+        '<div>Photo not added yet — drop a file in at</div>' +
+        '<code>' + escSrc + '</code>' +
+        '</div>';
+      return '<figure class="car-slide" data-index="' + i + '">' +
+        '<button type="button" class="shot-btn" data-src="' + escSrc + '" data-cap="' + cap + '" aria-label="View larger image">' +
+        '<img src="' + escSrc + '" alt="' + cap + '" loading="' + (i === 0 ? "eager" : "lazy") + '" ' +
+        // Replace only the image, not the whole slide — otherwise a missing
+        // photo silently removes a slide and the dots stop matching.
+        'onerror="this.parentNode.innerHTML=' + JSON.stringify(fallback).replace(/"/g, "&quot;") + '">' +
+        '</button>' +
+        (cap ? '<figcaption>' + cap + '</figcaption>' : '') +
+        '</figure>';
+    }).join("");
+
+    var dots = list.map(function (p, i) {
+      return '<button type="button" class="car-dot' + (i === 0 ? " is-active" : "") +
+        '" data-goto="' + i + '" aria-label="Go to photo ' + (i + 1) + ' of ' + list.length + '"></button>';
+    }).join("");
+
+    return '<div class="carousel" id="' + id + '" data-count="' + list.length + '" role="region" aria-label="' + U.esc(label) + '">' +
+      '<div class="car-viewport">' +
+      '<div class="car-track">' + slides + '</div>' +
+      '</div>' +
+      (list.length > 1
+        ? '<button type="button" class="car-arrow car-prev" aria-label="Previous photo">\u2039</button>' +
+          '<button type="button" class="car-arrow car-next" aria-label="Next photo">\u203a</button>' +
+          '<div class="car-dots">' + dots + '</div>'
+        : '') +
+      '</div>';
+  };
+
+  /* Wires every carousel on the page. Safe to call more than once — it
+     marks each one as wired so a re-render doesn't double-bind. */
+  D.wireCarousels = function () {
+    var all = document.querySelectorAll(".carousel");
+    for (var i = 0; i < all.length; i++) {
+      (function (root) {
+        if (root.getAttribute("data-wired")) return;
+        root.setAttribute("data-wired", "1");
+
+        var track = root.querySelector(".car-track");
+        var dots = root.querySelectorAll(".car-dot");
+        var count = Number(root.getAttribute("data-count")) || 0;
+        if (!track || count < 2) return;
+
+        // The index we last moved to. Scroll events are the source of truth
+        // for swipes, but they don't fire reliably everywhere (headless
+        // browsers, some embedded webviews), so button and dot clicks set
+        // this directly and the UI updates without waiting for a scroll.
+        var index = 0;
+
+        function current() {
+          var w = track.clientWidth || 1;
+          return Math.round(track.scrollLeft / w);
+        }
+
+        function paint(idx) {
+          index = Math.max(0, Math.min(count - 1, idx));
+          for (var d = 0; d < dots.length; d++) {
+            dots[d].classList.toggle("is-active", d === index);
+          }
+          var prev = root.querySelector(".car-prev");
+          var next = root.querySelector(".car-next");
+          if (prev) prev.disabled = index <= 0;
+          if (next) next.disabled = index >= count - 1;
+        }
+
+        function goTo(n) {
+          var w = track.clientWidth || 1;
+          var clamped = Math.max(0, Math.min(count - 1, n));
+          paint(clamped);
+          track.scrollTo({ left: clamped * w, behavior: "smooth" });
+        }
+
+        var prevBtn = root.querySelector(".car-prev");
+        var nextBtn = root.querySelector(".car-next");
+        if (prevBtn) prevBtn.addEventListener("click", function () { goTo(index - 1); });
+        if (nextBtn) nextBtn.addEventListener("click", function () { goTo(index + 1); });
+
+        for (var d = 0; d < dots.length; d++) {
+          dots[d].addEventListener("click", function (e) {
+            goTo(Number(e.currentTarget.getAttribute("data-goto")));
+          });
+        }
+
+        // A swipe moves the track without going through goTo, so follow the
+        // scroll position too — but only when it disagrees with what we
+        // already painted, otherwise a smooth scroll fights the buttons.
+        var raf = null;
+        function onScroll() {
+          if (raf) return;
+          raf = requestAnimationFrame(function () {
+            raf = null;
+            var idx = current();
+            if (idx !== index) paint(idx);
+          });
+        }
+        track.addEventListener("scroll", onScroll, { passive: true });
+
+        // Arrow keys when the track has focus
+        track.setAttribute("tabindex", "0");
+        track.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowLeft") { e.preventDefault(); goTo(index - 1); }
+          if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); }
+        });
+
+        paint(0);
+      })(all[i]);
+    }
+  };
+
   /* ------------------------------------------------------------- header --- */
 
   /* The nav is a function of the two switches rather than a fixed list, so
@@ -84,6 +217,7 @@
       { href: "stats.html", label: "Stats &amp; Records", page: "stats" },
       { href: "players.html", label: "Players", page: "players" },
       { href: "submit.html", label: "Submit Result", page: "submit" },
+      { href: "photos.html", label: "Send a Photo", page: "photos" },
       { href: "join.html", label: "Join Us", page: "join" }
     ];
   }
@@ -152,6 +286,7 @@
       '        <li><a href="stats.html">Overall career stats</a></li>' +
       '        <li><a href="archive.html">The archive</a></li>' +
       '        <li><a href="submit.html">Submit a result</a></li>' +
+      '        <li><a href="photos.html">Send a photo</a></li>' +
       '        <li><a href="join.html">How to join</a></li>' +
       '      </ul>' +
       '    </div>' +
