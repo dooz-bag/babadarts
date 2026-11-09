@@ -192,7 +192,7 @@ DATSU.config = {
     historyCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=1630828027&single=true&output=csv",
     /* The Photos tab — approved photos only. Leave blank to use the local
        list in data/photos.js instead. See docs/PHOTOS.md. */
-    photosCsvUrl: ""
+    photosCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSu7dSprVlU6AXu5wn8Z21JHGwgfxmGWN7ZIOUFc5AvTGUUfXmV1L_4gyPZWxaEV2CAX0pIP2TvtRob/pub?gid=881316952&single=true&output=csv"
   },
 
   /* ---- PHOTOS ---------------------------------------------------------
@@ -212,7 +212,7 @@ DATSU.config = {
                  browser shrinks it. Anything over ~2MB gets resized
                  client-side anyway, so this is mostly a sanity limit.  */
   photos: {
-    submitUrl: "",
+    submitUrl: "https://script.google.com/macros/s/AKfycbzJSFdt1xyYcXBLhe-2tjqFTb0BZKbgyd-YhlRN56wc6ictP6-FLxSC1KGPPHUohIUz5A/exec",
     moderation: true,
     maxUploadMb: 12,
     /* Shown on the home page carousel. These are the bar photos; the
