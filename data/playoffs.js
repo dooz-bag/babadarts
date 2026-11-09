@@ -32,4 +32,21 @@
 
 window.DATSU = window.DATSU || {};
 
-DATSU.playoffs = null;
+DATSU.playoffs = {
+  seasonId: "2026-fall",
+  finalizedAt: "2026-11-09",
+  seeds: [
+    { id: "liam", label: "A1", group: "A", pos: 1 },
+    { id: "brady", label: "B1", group: "B", pos: 1 },
+    { id: "martin", label: "A2", group: "A", pos: 2 },
+    { id: "ken", label: "B2", group: "B", pos: 2 },
+    { id: "mathieu", label: "A3", group: "A", pos: 3 },
+    { id: "sunagawa", label: "B3", group: "B", pos: 3 },
+    { id: "jibril", label: "A4", group: "A", pos: 4 },
+    { id: "patrick", label: "B4", group: "B", pos: 4 },
+    { id: "stoney", label: "A5", group: "A", pos: 5 },
+    { id: "rei", label: "B5", group: "B", pos: 5 },
+    { id: "suliman", label: "A6", group: "A", pos: 6 },
+    { id: "ben", label: "B6", group: "B", pos: 6 }
+  ]
+};

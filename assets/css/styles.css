@@ -285,6 +285,18 @@ a.card:hover { border-color: var(--line-2); background: var(--panel-2); text-dec
   font-weight: 600;
 }
 .status-badge .status-text span { color: var(--muted); font-size: 0.84rem; }
+/* The date sits quietly on the right of the badge, so it's there if you look
+   for it and out of the way if you don't. */
+.status-badge .status-when {
+  margin-left: 6px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line-2);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+  white-space: nowrap;
+}
 
 /* --------------------------------------------------------------- TABLE --- */
 .table-wrap {

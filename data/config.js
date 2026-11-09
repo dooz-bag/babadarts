@@ -57,8 +57,12 @@ DATSU.config = {
     seasonName: "Fall 2026 League",
     seasonId: "2026-fall",
 
-    phase: "league",          // "league" | "playoffs"
+    phase: "playoffs",        // "league" | "playoffs"
     tournamentMode: false,    // true = show the tournament instead
+
+    /* Shown under the badge on the front page once phase is "playoffs".
+       Leave it as "TBD" until the date is set — it reads fine either way. */
+    playoffDates: "TBD",
 
     /* Old name for phase === "playoffs". Still honoured if it's the only
        one set, so an existing config keeps working. */
@@ -93,7 +97,7 @@ DATSU.config = {
      rollercoaster, improved, fader, giant-killer, specialist.            */
   awards: {
     minGames: 4,
-    hiddenAwards: ["bottler"]
+    hiddenAwards: ["bottler", "giant-killer"]
   },
 
   /* ---- ダーツ Index ----------------------------------------------------

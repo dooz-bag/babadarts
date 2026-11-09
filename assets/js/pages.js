@@ -289,15 +289,17 @@
     var playoffs = D.phase() === "playoffs";
     var on = st.running !== false;
 
-    var cls, label, sub;
+    var cls, label, sub, when = "";
     if (tournament) {
       cls = "is-tournament";
       label = (D.config.tournament && D.config.tournament.name) || "Tournament";
       sub = "Tournament day";
+      when = (D.config.tournament && D.config.tournament.dates) || "";
     } else if (playoffs) {
       cls = "is-playoffs";
       label = st.seasonName;
       sub = "Playoffs";
+      when = st.playoffDates || "";
     } else {
       cls = on ? "is-on" : "is-off";
       label = st.seasonName;
@@ -310,6 +312,7 @@
       '<strong>' + U.esc(label) + '</strong>' +
       '<span>' + U.esc(sub) + '</span>' +
       '</span>' +
+      (when ? '<span class="status-when">' + U.esc(when) + '</span>' : '') +
       '</div>';
   }
 
@@ -343,6 +346,22 @@
     }
 
     set("status-board", statusBadgeHtml());
+
+    /* The status section renames itself once the bracket is real — "current
+       league status" is wrong when the league is over. */
+    if (tournament) {
+      set("status-eyebrow", "Tournament day");
+      set("status-heading", "What's on right now");
+      set("status-link", "Tournament bracket \u2192");
+    } else if (D.phase() === "playoffs") {
+      set("status-eyebrow", "Season complete");
+      set("status-heading", "The playoffs are set");
+      set("status-link", "The bracket \u2192");
+    } else {
+      set("status-eyebrow", "Current league status");
+      set("status-heading", "Where things stand right now");
+      set("status-link", "Playoff picture \u2192");
+    }
 
     /* A single quip, quietly, instead of a scrolling marquee */
     var quip = cfg.quips[Math.floor(Math.random() * cfg.quips.length)];

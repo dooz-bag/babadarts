@@ -120,7 +120,8 @@ status: {
   seasonId: "2026-fall",     // the archive id this season rolls over into
 
   phase: "league",           // "league" | "playoffs"
-  tournamentMode: false      // true = show the tournament instead
+  tournamentMode: false,     // true = show the tournament instead
+  playoffDates: "TBD"        // shown on the badge once phase is "playoffs"
 }
 ```
 
@@ -132,6 +133,9 @@ status: {
   `true` for the few days a tournament runs, then back to `false`. It works on
   top of either phase, so running a tournament mid-league never disturbs the
   league's own state.
+- **`playoffDates`** is the small date on the right of the badge. `"TBD"` is a
+  perfectly good value — change it to `"14 Nov 2026"` (or whatever) once the
+  date is set. It only appears in playoffs mode.
 
 That's the whole status board. When `running` is `false` the badge just says
 the league isn't on at the moment — no dates, no countdowns to keep updated.
@@ -243,15 +247,15 @@ from the results:
 | Rollercoaster | Largest spread of 01 averages |
 | Most Improved | Biggest rise between the first and second half of the season |
 | Fader | Biggest drop over the same split |
-| Giant Killer | Most wins over players above them in the table |
+| Giant Killer | Most wins over players above them, weighted by how far above |
 | Specialist | Biggest gap between their 01 and cricket strength |
 
 Two settings control them, in `data/config.js`:
 
 ```js
 awards: {
-  minGames: 4,                  // matches needed to qualify for an award
-  hiddenAwards: ["bottler"]     // awards to leave off the site
+  minGames: 4,                            // matches needed to qualify
+  hiddenAwards: ["bottler", "giant-killer"]  // awards to leave off the site
 }
 ```
 
@@ -260,6 +264,11 @@ the list to bring it back. The keys are `unlucky`, `dominance`, `heartbreak`,
 `clutch`, `bottler`, `metronome`, `rollercoaster`, `improved`, `fader`,
 `giant-killer` and `specialist`. It applies to archived seasons too, so the
 whole site stays consistent.
+
+**Giant Killer** needs at least **two** wins over higher-placed players to
+qualify — one lucky night isn't a season. It's also weighted by how far above
+you the opponent finished, so beating the group leader from 6th beats beating
+12th from 13th. The card shows the total places gained and the best scalp.
 
 Forfeited and withdrawn players are excluded automatically — otherwise a 0–2
 forfeit would win "Most Improved".

@@ -656,7 +656,7 @@
           ppd: [], mpr: [], ppdSeries: [],
           deciders: 0, deciderWins: 0,
           closeLosses: 0, straightLosses: 0,
-          winsOverHigher: 0
+          winsOverHigher: 0, winsOverHigherGap: 0, bestScalp: null
         };
       }
       return acc[pid];
@@ -753,14 +753,26 @@
       .sort(function (x, y) { return y.ppdAvg - x.ppdAvg; });
     byPpd.forEach(function (p, i) { p.ppdRank = i + 1; });
 
-    /* --- pass 3: wins over higher-placed opponents --------------------- */
+    /* --- pass 3: wins over higher-placed opponents ---------------------
+       Weighted by how far above you they finished, so beating the leader
+       from 6th counts for more than beating 12th from 13th. */
     list.forEach(function (m) {
       if (skip(m.a) || skip(m.b)) return;
       var s = D.legScore(m);
       var A = acc[m.a], B = acc[m.b];
       if (!A || !B) return;
-      if (s.a > s.b && A.tablePos > B.tablePos) A.winsOverHigher++;
-      if (s.b > s.a && B.tablePos > A.tablePos) B.winsOverHigher++;
+      if (s.a > s.b && A.tablePos > B.tablePos) {
+        var gapA = A.tablePos - B.tablePos;
+        A.winsOverHigher++;
+        A.winsOverHigherGap += gapA;
+        if (!A.bestScalp || gapA > A.bestScalp.gap) A.bestScalp = { id: m.b, gap: gapA };
+      }
+      if (s.b > s.a && B.tablePos > A.tablePos) {
+        var gapB = B.tablePos - A.tablePos;
+        B.winsOverHigher++;
+        B.winsOverHigherGap += gapB;
+        if (!B.bestScalp || gapB > B.bestScalp.gap) B.bestScalp = { id: m.a, gap: gapB };
+      }
     });
 
     /* --- pass 4: pick the winners -------------------------------------- */
@@ -796,6 +808,8 @@
     var withSpread = eligible.filter(function (p) { return p.ppdSd !== null && p.ppd.length >= 6; });
     var withTrend = eligible.filter(function (p) { return p.trend !== null; });
     var withBoth = eligible.filter(function (p) { return p.specialistGap !== null; });
+    // One lucky win isn't a giant-killing season — you need at least two.
+    var withScalps = eligible.filter(function (p) { return p.winsOverHigher >= 2; });
 
     var all = [
       pick("unlucky", "Unlucky",
@@ -872,10 +886,14 @@
 
       pick("giant-killer", "Giant Killer",
         "Beats the people above them and loses to the people below.",
-        eligible,
-        function (p) { return p.winsOverHigher; },
-        function (v) { return v + (v === 1 ? " scalp" : " scalps"); },
-        function (p) { return "wins over higher-placed players"; }),
+        withScalps,
+        function (p) { return p.winsOverHigherGap; },
+        function (v, p) { return p.winsOverHigher + (p.winsOverHigher === 1 ? " scalp" : " scalps"); },
+        function (p) {
+          var best = p.bestScalp ? D.player(p.bestScalp.id) : null;
+          return "worth " + p.winsOverHigherGap + " places" +
+            (best ? ", best was " + best.name + " (" + p.bestScalp.gap + " above)" : "");
+        }),
 
       pick("specialist", "Specialist",
         "One game is carrying the other.",
