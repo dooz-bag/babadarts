@@ -607,6 +607,57 @@ tr.cutline td { border-bottom: 1px dashed var(--line-2) !important; }
 .admin-seeds li { margin-bottom: 4px; break-inside: avoid; }
 .admin-seeds strong { color: var(--text); font-family: var(--font-mono); font-size: 0.82rem; }
 
+/* --- photo review queue ---------------------------------------------- */
+.photo-review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.photo-review {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.photo-review.is-pending  { border-left-color: var(--accent-warm); }
+.photo-review.is-approved { border-left-color: var(--accent-good); }
+.photo-review.is-rejected { border-left-color: var(--accent); opacity: 0.62; }
+
+.photo-review-img { display: block; line-height: 0; background: var(--ink-2); }
+.photo-review-img img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+.photo-review-broken {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.photo-review-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; }
+.photo-review-status {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.photo-review.is-pending .photo-review-status  { color: var(--accent-warm); }
+.photo-review.is-approved .photo-review-status { color: var(--accent-good); }
+.photo-review.is-rejected .photo-review-status { color: var(--accent); }
+.photo-review-cap { margin: 0; font-size: 0.9rem; line-height: 1.4; }
+.photo-review .btn-row { flex-wrap: wrap; gap: 8px; }
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
 @media (max-width: 640px) {
   .admin-seeds { columns: 1; }
 }

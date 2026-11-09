@@ -344,7 +344,27 @@ Either way, save and refresh — no other page changes. The current league
 table, this season's stats and the playoff bracket are completely unaffected;
 only the Career averages section on the Stats page grows.
 
-## 4c. Finalizing the playoff bracket
+## 4c. Reviewing photos
+
+If photo uploads are wired up (see [PHOTOS.md](PHOTOS.md)), every photo people
+send in lands in the `Photos` tab marked **pending** and stays off the site
+until you approve it.
+
+1. Open `admin.html`.
+2. In the **Review photos** panel, type the league passcode and hit
+   **Load the queue**.
+3. Each photo shows a thumbnail, its caption, and who sent it. Hit
+   **Approve** or **Reject**.
+
+Approving makes it appear in the carousel on the next page load. Rejecting
+also moves the file to the Drive bin, so it doesn't linger in the folder.
+**Back to pending** undoes either decision.
+
+The queue is read live from the sheet rather than from the published CSV,
+because Google caches that for a few minutes and you'd be looking at a stale
+list.
+
+## 4d. Finalizing the playoff bracket
 
 While the league is running, the Playoffs page shows a *projection* — the
 bracket as if the season ended today. That's useful right up until the moment

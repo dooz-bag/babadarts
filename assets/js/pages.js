@@ -2818,6 +2818,95 @@
       '<textarea class="admin-code" readonly rows="10">' + U.esc(resetMatches) + '</textarea>';
   }
 
+  /* ------------------------------------------------- photo review queue --- */
+
+  /* The Photos tab is the source of truth, so this panel asks the Apps Script
+     for the current rows rather than trusting whatever the published CSV
+     says — the CSV is cached for minutes and would show a stale queue. */
+  function adminPhotosHtml() {
+    var cfg = D.config.photos || {};
+    var url = cfg.submitUrl || (D.config.resultsForm && D.config.resultsForm.submitUrl) || "";
+
+    if (!url) {
+      return '<div class="card">' +
+        '<h3>Review photos</h3>' +
+        '<p class="muted">Photo uploads aren\u2019t wired up yet. Set ' +
+        '<code>photos.submitUrl</code> in <code>data/config.js</code> \u2014 see ' +
+        '<a href="docs/PHOTOS.md">docs/PHOTOS.md</a>.</p>' +
+        '</div>';
+    }
+
+    return '<div class="card">' +
+      '<h3>Review photos</h3>' +
+      '<p class="muted tiny">Uploads land as <strong>pending</strong> and stay off the site until ' +
+      'you approve them. Rejecting also moves the file to the Drive bin.</p>' +
+      '<div class="field-row" style="margin:16px 0">' +
+      '<div class="field"><label for="ph-passcode">League passcode</label>' +
+      '<input type="password" id="ph-passcode" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="btn-row" style="margin-top:0;margin-bottom:16px">' +
+      '<button type="button" class="btn btn-quiet" id="ph-load">Load the queue</button>' +
+      '</div>' +
+      '<div id="ph-msg" class="form-msg" aria-live="polite"></div>' +
+      '<div id="ph-queue"></div>' +
+      '</div>';
+  }
+
+  function photoQueueHtml(photos) {
+    if (!photos.length) {
+      return '<p class="muted">No photos in the sheet yet.</p>';
+    }
+
+    var pending = photos.filter(function (p) { return p.status === "pending"; });
+    var rest = photos.filter(function (p) { return p.status !== "pending"; });
+
+    function card(p) {
+      var cls = "photo-review " + (p.status === "pending" ? "is-pending"
+        : p.status === "approved" ? "is-approved" : "is-rejected");
+      var badge = p.status === "pending" ? "Pending"
+        : p.status === "approved" ? "Approved"
+        : p.status === "rejected" ? "Rejected" : (p.status || "No status");
+
+      var meta = [];
+      if (p.season) meta.push("season: " + p.season);
+      if (p.credit) meta.push("by " + p.credit);
+      if (p.date) meta.push(p.date);
+
+      return '<div class="' + cls + '" data-row="' + p.row + '">' +
+        '<a class="photo-review-img" href="' + U.esc(p.url) + '" target="_blank" rel="noopener">' +
+        '<img src="' + U.esc(p.url) + '" alt="' + U.esc(p.caption || "Photo") + '" loading="lazy" ' +
+        'onerror="this.parentNode.innerHTML=\'<span class=photo-review-broken>Image won\\\'t load</span>\'">' +
+        '</a>' +
+        '<div class="photo-review-body">' +
+        '<p class="photo-review-status">' + U.esc(badge) + '</p>' +
+        (p.caption ? '<p class="photo-review-cap">' + U.esc(p.caption) + '</p>'
+          : '<p class="photo-review-cap muted">No caption</p>') +
+        (meta.length ? '<p class="muted tiny">' + U.esc(meta.join(" \u00b7 ")) + '</p>' : '') +
+        '<div class="btn-row" style="margin-top:10px">' +
+        (p.status !== "approved"
+          ? '<button type="button" class="btn btn-sm ph-approve" data-row="' + p.row + '">Approve</button>'
+          : '') +
+        (p.status !== "rejected"
+          ? '<button type="button" class="btn btn-quiet btn-sm ph-reject" data-row="' + p.row + '">Reject</button>'
+          : '') +
+        (p.status !== "pending"
+          ? '<button type="button" class="btn btn-quiet btn-sm ph-pend" data-row="' + p.row + '">Back to pending</button>'
+          : '') +
+        '</div>' +
+        '</div>' +
+        '</div>';
+    }
+
+    return (pending.length
+      ? '<p class="eyebrow">Waiting for you (' + pending.length + ')</p>' +
+        '<div class="photo-review-grid">' + pending.map(card).join("") + '</div>'
+      : '<p class="accent-good tiny">\u2713 Nothing waiting for review.</p>') +
+      (rest.length
+        ? '<p class="eyebrow" style="margin-top:22px">Already dealt with (' + rest.length + ')</p>' +
+          '<div class="photo-review-grid">' + rest.map(card).join("") + '</div>'
+        : '');
+  }
+
   /* ------------------------------------------------- finalize the bracket --- */
 
   function adminBracketHtml() {
@@ -2892,11 +2981,108 @@
       '<p class="muted tiny">Google caches published sheets for a few minutes, so the site may keep ' +
       'showing the old season for a little while after a successful rollover. That\u2019s Google, not a bug.</p>' +
       '</div>' +
-      adminRolloverHtml() +
+      adminPhotosHtml() +
+      '<div style="margin-top:16px">' + adminRolloverHtml() + '</div>' +
       '<div style="margin-top:16px">' + adminBracketHtml() + '</div>');
 
     drawTable();
     set("ad-generated", adminGeneratedHtml(rows, adminSeasonId()));
+
+    /* --- photo review -------------------------------------------------- */
+
+    var photoUrl = (D.config.photos && D.config.photos.submitUrl) ||
+      (D.config.resultsForm && D.config.resultsForm.submitUrl) || "";
+
+    function photoMsg(kind, text) {
+      var el = $("ph-msg");
+      if (!el) return;
+      el.className = text ? ("form-msg is-" + kind) : "form-msg";
+      el.textContent = text;
+    }
+
+    function photoPost(payload) {
+      if (!photoUrl) {
+        photoMsg("err", "No Apps Script URL is set in data/config.js.");
+        return Promise.resolve(null);
+      }
+      return fetch(photoUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).then(function (r) { return r.json(); });
+    }
+
+    function drawQueue(photos) {
+      set("ph-queue", photoQueueHtml(photos));
+      wireQueueButtons(photos);
+    }
+
+    function wireQueueButtons(photos) {
+      var queue = $("ph-queue");
+      if (!queue) return;
+
+      function act(row, status, label) {
+        var passcode = ($("ph-passcode") || {}).value || "";
+        if (!passcode) {
+          photoMsg("err", "Type the passcode first \u2014 it's needed to change anything.");
+          return;
+        }
+        photoMsg("pending", label + "\u2026");
+        photoPost({ action: "photoReview", passcode: passcode, row: row, status: status })
+          .then(function (res) {
+            if (!res) return;
+            if (res.ok) {
+              photoMsg("ok", "\u2713 Row " + row + " is now " + status + ".");
+              // Update in place rather than refetching — the queue is small
+              // and a round trip per click would feel sluggish.
+              photos.forEach(function (p) { if (p.row === row) p.status = status; });
+              drawQueue(photos);
+            } else {
+              photoMsg("err", res.error || "The sheet said no.");
+            }
+          })
+          .catch(function (err) {
+            photoMsg("err", "Couldn\u2019t reach the sheet: " + (err.message || err));
+          });
+      }
+
+      queue.addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-row]");
+        if (!btn) return;
+        var row = Number(btn.getAttribute("data-row"));
+        if (btn.classList.contains("ph-approve")) act(row, "approved", "Approving");
+        else if (btn.classList.contains("ph-reject")) act(row, "rejected", "Rejecting");
+        else if (btn.classList.contains("ph-pend")) act(row, "pending", "Moving back to pending");
+      });
+    }
+
+    var loadPhotosBtn = $("ph-load");
+    if (loadPhotosBtn) {
+      loadPhotosBtn.addEventListener("click", function () {
+        var passcode = ($("ph-passcode") || {}).value || "";
+        if (!passcode) {
+          photoMsg("err", "Type the passcode first.");
+          return;
+        }
+        photoMsg("pending", "Asking the sheet for the queue\u2026");
+        photoPost({ action: "photos", passcode: passcode })
+          .then(function (res) {
+            if (!res) return;
+            if (res.ok) {
+              var pending = (res.photos || []).filter(function (p) { return p.status === "pending"; }).length;
+              photoMsg(pending ? "warn" : "ok",
+                pending ? pending + " photo" + (pending === 1 ? "" : "s") + " waiting for review."
+                        : "\u2713 Nothing waiting for review.");
+              drawQueue(res.photos || []);
+            } else {
+              photoMsg("err", res.error || "The sheet said no.");
+            }
+          })
+          .catch(function (err) {
+            photoMsg("err", "Couldn\u2019t reach the sheet: " + (err.message || err));
+          });
+      });
+    }
 
     /* --- buttons ------------------------------------------------------- */
 

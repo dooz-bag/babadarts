@@ -29,7 +29,7 @@ It's written for someone who has never opened a code file before.
 | `submit.html` | Optional phone-friendly form to log a result straight into the Google Sheet |
 | `photos.html` | Optional phone-friendly form to send in a photo — uploads to Drive, waits for approval |
 | `join.html` | How to join, where we are, how to reach us on LINE |
-| `admin.html` | Once-a-season tools: roll the season over into History, and finalize the bracket |
+| `admin.html` | Once-a-season tools: review submitted photos, roll the season over into History, and finalize the bracket |
 
 ## Where the data lives
 

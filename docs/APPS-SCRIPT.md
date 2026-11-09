@@ -141,6 +141,8 @@ function doPost(e) {
     var action = String(body.action || "result");
 
     if (action === "photo") return appendPhoto(body);
+    if (action === "photos") return listPendingPhotos(body);
+    if (action === "photoReview") return reviewPhoto(body);
     if (action === "preview") return previewRollover(body);
     if (action === "rollover") return commitRollover(body);
 
@@ -322,6 +324,103 @@ function appendPhoto(body) {
 
   sheet.appendRow(row.values);
   return respond({ ok: true, url: url });
+}
+
+/* ------------------------------------------------------ photo review --- */
+
+/* Lists every photo row with its row number, so the admin page can show a
+   queue and then act on a specific row. Returns pending first, then the
+   rest newest-first, so the thing you need to look at is at the top. */
+function listPendingPhotos(body) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAMES.photos);
+  if (!sheet) {
+    return respond({ ok: false, error: "Can't find a \"" + SHEET_NAMES.photos + "\" tab in this sheet." });
+  }
+
+  var last = sheet.getLastRow();
+  if (last < 2) return respond({ ok: true, photos: [] });
+
+  var width = sheet.getLastColumn();
+  var header = sheet.getRange(1, 1, 1, width).getValues()[0].map(function (h) {
+    return String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  });
+  var data = sheet.getRange(2, 1, last - 1, width).getValues();
+
+  function col(name) { return header.indexOf(name); }
+  var iUrl = col("url"), iCap = col("caption"), iSeason = col("season"),
+      iCredit = col("credit"), iDate = col("date"), iStatus = col("status");
+
+  var photos = data.map(function (row, i) {
+    return {
+      row: i + 2,                       // 1-based sheet row, header is row 1
+      url: iUrl >= 0 ? String(row[iUrl] || "") : "",
+      caption: iCap >= 0 ? String(row[iCap] || "") : "",
+      season: iSeason >= 0 ? String(row[iSeason] || "") : "",
+      credit: iCredit >= 0 ? String(row[iCredit] || "") : "",
+      date: iDate >= 0 ? String(row[iDate] || "") : "",
+      status: iStatus >= 0 ? String(row[iStatus] || "").trim().toLowerCase() : ""
+    };
+  }).filter(function (p) { return p.url; });
+
+  photos.sort(function (x, y) {
+    var xp = x.status === "pending" ? 0 : 1;
+    var yp = y.status === "pending" ? 0 : 1;
+    if (xp !== yp) return xp - yp;
+    if (x.date !== y.date) return x.date < y.date ? 1 : -1;
+    return y.row - x.row;
+  });
+
+  return respond({ ok: true, photos: photos });
+}
+
+/* Approves or rejects one row. Rejecting also trashes the Drive file, so a
+   rejected photo doesn't sit in the folder forever. */
+function reviewPhoto(body) {
+  var row = Number(body.row);
+  var status = String(body.status || "").toLowerCase();
+  if (!row || row < 2) return respond({ ok: false, error: "No row given." });
+  if (status !== "approved" && status !== "rejected" && status !== "pending") {
+    return respond({ ok: false, error: "Status must be approved, rejected or pending." });
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAMES.photos);
+  if (!sheet) {
+    return respond({ ok: false, error: "Can't find a \"" + SHEET_NAMES.photos + "\" tab in this sheet." });
+  }
+
+  // Check the shape before the row number: a missing status column breaks
+  // every review, so it's the more useful thing to report first.
+  var width = sheet.getLastColumn();
+  var header = sheet.getRange(1, 1, 1, width).getValues()[0].map(function (h) {
+    return String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  });
+  var iStatus = header.indexOf("status");
+  if (iStatus === -1) {
+    return respond({ ok: false, error: "The Photos tab has no \"status\" column." });
+  }
+
+  if (row > sheet.getLastRow()) {
+    return respond({ ok: false, error: "Row " + row + " is past the end of the sheet." });
+  }
+
+  sheet.getRange(row, iStatus + 1).setValue(status);
+
+  // Rejecting should also clear the file out of Drive. Best-effort: if the
+  // file is already gone or the id can't be parsed, the status change still
+  // stands, because that's what actually hides it from the site.
+  var trashed = false;
+  if (status === "rejected") {
+    var iUrl = header.indexOf("url");
+    if (iUrl >= 0) {
+      var url = String(sheet.getRange(row, iUrl + 1).getValue() || "");
+      var id = (url.match(/\/d\/([a-zA-Z0-9_-]+)/) || [])[1];
+      if (id) {
+        try { DriveApp.getFileById(id).setTrashed(true); trashed = true; } catch (ignored) {}
+      }
+    }
+  }
+
+  return respond({ ok: true, row: row, status: status, trashed: trashed });
 }
 
 /* ------------------------------------------------------ season rollover --- */

@@ -123,10 +123,18 @@ sheet: {
 ## Approving photos
 
 With `moderation: true`, every upload lands as `pending` and is invisible on
-the site. To publish one, change its **status** cell to `approved`. That's it —
-no redeploy, no code change.
+the site. There are two ways to publish one:
 
-Google caches published sheets for a few minutes, so give it a moment.
+**The admin page (easier).** Open `admin.html`, type the passcode in the
+**Review photos** panel, and hit **Load the queue**. You get thumbnails with
+**Approve** / **Reject** buttons. Rejecting also moves the file to the Drive
+bin. See [UPDATING.md](UPDATING.md#4c-reviewing-photos).
+
+**By hand.** Change the **status** cell in the `Photos` tab to `approved`.
+Same effect, no redeploy either way.
+
+Google caches published sheets for a few minutes, so give it a moment before
+the carousel updates.
 
 ## Things worth knowing
 
