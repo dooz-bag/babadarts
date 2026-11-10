@@ -46,7 +46,7 @@ DATSU.playoffs = {
     { id: "patrick", label: "B4", group: "B", pos: 4 },
     { id: "stoney", label: "A5", group: "A", pos: 5 },
     { id: "rei", label: "B5", group: "B", pos: 5 },
-    { id: "suliman", label: "A6", group: "A", pos: 6 },
+    { id: "nanki", label: "A6", group: "A", pos: 6 },
     { id: "ben", label: "B6", group: "B", pos: 6 }
   ]
 };
